@@ -857,14 +857,14 @@ class QrCode {
 		# Increase the error correction level while the data still fits in the current version number
         if($boostEcl)
         {
-			$nextEcl = $ecl.getHigherEcc()
+			$nextEcl = $ecl
             do {
+				$nextEcl = $nextEcl.getHigherEcc()
                 if ($dataUsedBits -le ([QrCode]::getNumDataCodewords($tmpVersion, $nextEcl) * 8))
                 {
                     $ecl.setEccValue($nextEcl.getEccValue())
 				}
-				$nextEcl = $nextEcl.getHigherEcc()
-            } until ($nextEcl.isMax())
+            } until($nextEcl.isMax())
         }
 		
         # Concatenate all segments to create the data bit string
@@ -1006,14 +1006,14 @@ class QrCode {
 		$this.isFunction = New-Object 'boolean[][]' $this.size,$this.size
 		
         # Compute ECC, draw modules, do masking
-        $this.drawFunctionPatterns()
+		$this.drawFunctionPatterns()
+		# Write-Host $this.toString()
+		
 		[byte[]] $allCodewords = $this.addEccAndInterleave($dataCodewords)
-		# ToDo_TemporaryBreak_1
-		# ToDo_TemporaryBreak_2
-		# return
+		
 		$this.drawCodewords($allCodewords)
-		# ToDo_TemporaryBreak_3
-		# return
+		# Write-Host $this.toString()
+
 		$this.mask = $this.handleConstructorMasking($msk)
 		$this.isFunction = $null
 	}
@@ -1316,8 +1316,6 @@ class QrCode {
 			Write-Error -Message "emptyData" -ErrorAction Stop
 			throw "emptyData"
 		}
-		# ToDo_TemporaryBreak_1
-		# return @()
 
         if ($data.length -ne [QrCode]::getNumDataCodewords($this.version, $this.errorCorrectionLevel))
         {
@@ -1325,9 +1323,6 @@ class QrCode {
 			Write-Error -Message "IllegalArgumentException" -ErrorAction Stop
 			throw "IllegalArgumentException"
 		}
-		
-        # ToDo_TemporaryBreak_2
-		# return @()
 		
 		# Calculate parameter numbers
         [int] $numBlocks = [QrCodeGlobal]::NUM_ERROR_CORRECTION_BLOCKS[$this.errorCorrectionLevel.getEccOrdinal()][$this.version]
@@ -1343,9 +1338,9 @@ class QrCode {
         for ([int] $i = 0; $i -lt $numBlocks; $i++)
         {
             if($i -lt $numShortBlocks){$boolNSB = 0}else{$boolNSB = 1}
-            $newSize = $k + $shortBlockLen - $blockEccLen + $boolNSB
+            $newSize = $shortBlockLen - $blockEccLen + $boolNSB
             [byte[]] $dat = New-Object 'byte[]' $newSize
-			$loopSize = [Math]::Min($data.Length, $newSize)
+			$loopSize = [Math]::Min($data.Length - $k, $newSize)
             for ($counter = 0; $counter -lt $loopSize; $counter++)
             {
                 $dat[$counter] = $data[$k + $counter]
@@ -1501,6 +1496,7 @@ class QrCode {
 				$this.applyMask($i)
 				$this.drawFormatBits($i)
 				[int] $penalty = $this.getPenaltyScore()
+				# Write-Host "mask " + $i + " : " $penalty
 				if ($penalty -lt $minPenalty)
 				{
 					$msk = $i
@@ -1519,7 +1515,7 @@ class QrCode {
 		}
 		
 		# ToDo_test
-		$msk = 6
+		# $msk = 1
 		Write-Host $msk
 
 		$this.applyMask($msk) # Apply the final choice of mask
@@ -1536,67 +1532,90 @@ class QrCode {
 		# Write-Error -Message "Call_handleGetPenaltyScore" -ErrorAction Stop
 		# throw "Call_handleGetPenaltyScore"
 		[int] $result = 0
-		return 0
 		
-	# 	// Adjacent modules in row having same color, and finder-like patterns
+		# Adjacent modules in row having same color, and finder-like patterns
 		for([int] $y = 0; $y -lt $this.size; $y++)
 		{
-	# 		boolean runColor = false;
-	# 		int runX = 0;
-	# 		int[] runHistory = new int[7];
-	# 		for (int x = 0; x < size; x++) {
-	# 			if (modules[y][x] == runColor) {
-	# 				runX++;
-	# 				if (runX == 5)
-	# 					result += PENALTY_N1;
-	# 				else if (runX > 5)
-	# 					result++;
-	# 			} else {
-	# 				finderPenaltyAddHistory(runX, runHistory);
-	# 				if (!runColor)
-	# 					result += finderPenaltyCountPatterns(runHistory) * PENALTY_N3;
-	# 				runColor = modules[y][x];
-	# 				runX = 1;
-	# 			}
-	# 		}
-	# 		result += finderPenaltyTerminateAndCount(runColor, runX, runHistory) * PENALTY_N3;
+			[boolean] $runColor = $false
+			[int] $runX = 0
+			[int[]] $runHistory = New-Object 'int[]' 7
+			for ([int] $x = 0; $x -lt $this.size; $x++)
+			{
+				if ($this.modules[$y][$x] -eq $runColor)
+				{
+					$runX++
+					if ($runX -eq 5)
+					{
+						$result += [QrCodeGlobal]::PENALTY_N1
+					}
+					elseif ($runX -gt 5)
+					{
+						$result++
+					}
+				}
+				else
+				{
+					$this.finderPenaltyAddHistory($runX, $runHistory)
+					if (-not $runColor)
+					{
+						$result += $this.finderPenaltyCountPatterns($runHistory) * [QrCodeGlobal]::PENALTY_N3
+					}
+					$runColor = $this.modules[$y][$x]
+					$runX = 1
+				}
+			}
+			$result += ($this.finderPenaltyTerminateAndCount($runColor, $runX, $runHistory) * [QrCodeGlobal]::PENALTY_N3)
 		}
-		
+		# Write-Host "1 - " + $result
+
 		# Adjacent modules in column having same color, and finder-like patterns
 		for ([int] $x = 0; $x -lt $this.size; $x++)
 		{
-	# 		boolean runColor = false;
-	# 		int runY = 0;
-	# 		int[] runHistory = new int[7];
-	# 		for (int y = 0; y < size; y++) {
-	# 			if (modules[y][x] == runColor) {
-	# 				runY++;
-	# 				if (runY == 5)
-	# 					result += PENALTY_N1;
-	# 				else if (runY > 5)
-	# 					result++;
-	# 			} else {
-	# 				finderPenaltyAddHistory(runY, runHistory);
-	# 				if (!runColor)
-	# 					result += finderPenaltyCountPatterns(runHistory) * PENALTY_N3;
-	# 				runColor = modules[y][x];
-	# 				runY = 1;
-	# 			}
-	# 		}
-	# 		result += finderPenaltyTerminateAndCount(runColor, runY, runHistory) * PENALTY_N3;
+			[boolean] $runColor = $false
+			[int] $runY = 0
+			[int[]] $runHistory = New-Object 'int[]' 7
+			for ([int] $y = 0; $y -lt $this.size; $y++)
+			{
+				if ($this.modules[$y][$x] -eq $runColor)
+				{
+					$runY++
+					if ($runY -eq 5)
+					{
+						$result += [QrCodeGlobal]::PENALTY_N1
+					}
+					elseif ($runY -gt 5)
+					{
+						$result++
+					}
+				}
+				else
+				{
+					$this.finderPenaltyAddHistory($runY, $runHistory)
+					if (-not $runColor)
+					{
+						$result += $this.finderPenaltyCountPatterns($runHistory) * [QrCodeGlobal]::PENALTY_N3
+					}
+					$runColor = $this.modules[$y][$x]
+					$runY = 1
+				}
+			}
+			$result += ($this.finderPenaltyTerminateAndCount($runColor, $runY, $runHistory) * [QrCodeGlobal]::PENALTY_N3)
 		}
+		# Write-Host "2 - " + $result
 		
 		# 2*2 blocks of modules having same color
 		for ([int] $y = 0; $y -lt ($this.size - 1); $y++)
 		{
-	# 		for (int x = 0; x < size - 1; x++) {
-	# 			boolean color = modules[y][x];
-	# 			if (  color == modules[y][x + 1] &&
-	# 			      color == modules[y + 1][x] &&
-	# 			      color == modules[y + 1][x + 1])
-	# 				result += PENALTY_N2;
-	# 		}
+			for ([int] $x = 0; $x -lt ($this.size - 1); $x++)
+			{
+				[boolean] $color = $this.modules[$y][$x]
+				if (  ($color -eq $this.modules[$y][$x + 1]) -and ($color -eq $this.modules[$y + 1][$x]) -and ($color -eq $this.modules[$y + 1][$x + 1]) )
+				{
+					$result += [QrCodeGlobal]::PENALTY_N2
+				}
+			}
 		}
+		# Write-Host "3 - " + $result
 		
 		# Balance of black and white modules
 		[int] $black = 0
@@ -1606,14 +1625,16 @@ class QrCode {
 			foreach ($color in $row)
 			# for (boolean color : row)
 			{
-				if ($color){black++}
+				if ($color){$black++}
 			}
 		}
 		[int] $total = $this.size * $this.size # Note that size is odd, so black/total != 1/2
-		
+		# Write-Host "4 - " + $result
+
 		# Compute the smallest integer k >= 0 such that (45-5k)% <= black/total <= (55+5k)%
-		[int] $k = [math]::Truncate(([math]::Abs(($black * 20) - ($total * 10)) + $total - 1) / ($total - 1))
+		[int] $k = [math]::Truncate(([math]::Abs(($black * 20) - ($total * 10)) + $total - 1) / $total) - 1
 		$result += $k * [QrCodeGlobal]::PENALTY_N4
+		# Write-Host "5 - " + $result
 
 		return $result
 	}
@@ -1689,7 +1710,7 @@ class QrCode {
 			Write-Error -Message "errorAssertResultOutOfRange" -ErrorAction Stop
 			throw "errorAssertResultOutOfRange"
 		}
-		return $result;
+		return $result
 	}
 	
 	
@@ -1815,7 +1836,7 @@ class QrCode {
 	# returns either 0, 1, or 2. A helper function for getPenaltyScore().
 	hidden [int] finderPenaltyCountPatterns([int[]] $runHistory)
 	{
-		[int] $n = runHistory[1]
+		[int] $n = $runHistory[1]
 		if ($n -gt ($this.size * 3))
 		{
 			# TODO_throw
@@ -1824,12 +1845,12 @@ class QrCode {
 			throw "errorAssertNOutOfRange"
 		}
 		
-		[boolean] $core = (($n -gt 0) -and (runHistory[2] -eq $n) -and (runHistory[3] -eq ($n * 3)) -and (runHistory[4] -eq $n) -and (runHistory[5] -eq $n))
+		[boolean] $core = (($n -gt 0) -and ($runHistory[2] -eq $n) -and ($runHistory[3] -eq ($n * 3)) -and ($runHistory[4] -eq $n) -and ($runHistory[5] -eq $n))
 		[int] $tmpA = 0
 		[int] $tmpB = 0
-		if(runHistory[6] -ge $n){$tmpA = 1}
-		if(runHistory[0] -ge $n){$tmpB = 1}
-		return ($core -and (runHistory[0] -ge ($n * 4)) -and ($tmpA)) + ($core -and (runHistory[6] -ge ($n * 4)) -and ($tmpB))
+		if($runHistory[6] -ge $n){$tmpA = 1}
+		if($runHistory[0] -ge $n){$tmpB = 1}
+		return ($core -and ($runHistory[0] -ge ($n * 4)) -and ($tmpA)) + ($core -and ($runHistory[6] -ge ($n * 4)) -and ($tmpB))
 	}
 	
 	
@@ -1838,25 +1859,34 @@ class QrCode {
 	{
 		if ($currentRunColor) # Terminate black run
 		{
-			finderPenaltyAddHistory($currentRunLength, $runHistory)
+			$this.finderPenaltyAddHistory($currentRunLength, $runHistory)
 			$currentRunLength = 0
 		}
 		$currentRunLength += $this.size # Add white border to final run
-		finderPenaltyAddHistory($currentRunLength, $runHistory)
-		return finderPenaltyCountPatterns($runHistory)
+		$this.finderPenaltyAddHistory($currentRunLength, $runHistory)
+		return $this.finderPenaltyCountPatterns($runHistory)
 	}
 	
 	
 	# Pushes the given value to the front and drops the last value. A helper function for getPenaltyScore().
 	hidden finderPenaltyAddHistory([int] $currentRunLength, [int[]] $runHistory)
 	{
-		if ($runHistory[0] == 0)
+		if ($runHistory[0] -eq 0)
 		{
 			$currentRunLength += $this.size # Add white border to initial run
 		}
 		
-		System.arraycopy($runHistory, 0, $runHistory, 1, $runHistory.length - 1)
-		
+		# System.arraycopy($runHistoryClone, 0, $runHistory, 1, $runHistory.length - 1)
+		# source_arr : $runHistoryClone
+		# sourcePos : 0
+		# dest_arr : $runHistory
+		# destPos : 1
+		# len : $runHistory.length - 1
+		$runHistoryClone = $runHistory.Clone()
+		for ($counter = 0; $counter -lt ($runHistory.length - 1); $counter++)
+		{
+			$runHistory[1 + $counter] = $runHistoryClone[0 + $counter]
+		}
 		$runHistory[0] = $currentRunLength
 	}
 	
@@ -1871,9 +1901,11 @@ class QrCode {
 
 
 [Ecc] $ecl = [Ecc]::LOW()
-$text = "1234" # 6
-# $text = "12345678901234567890123456789012345678901234567890" # 4
-# $text = "123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890" # 2
+# $text = "1234"
+$text = "123456"
+# $text = "12345678901234567890123456789012345678901234567890"
+# $text = "123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890"
+# $text = "123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890"     # User-supplied Unicode text
 
 $enc = [system.Text.Encoding]::ASCII
 $bytes = $enc.GetBytes($text)
