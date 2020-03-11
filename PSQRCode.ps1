@@ -22,10 +22,11 @@ class Ecc{
 	# Must be declared in ascending order of error protection
 	# so that the implicit getEccOrdinal and getEccValue work properly
 
-	# The QR Code can tolerate about  7% erroneous codewords ->      LOW = 1
-	# The QR Code can tolerate about 15% erroneous codewords ->   MEDIUM = 0
-	# The QR Code can tolerate about 25% erroneous codewords -> QUARTILE = 3
-	# The QR Code can tolerate about 30% erroneous codewords ->     HIGH = 2
+	#                                                               NAME | Ecc Value | Ordinal Value
+	# The QR Code can tolerate about  7% erroneous codewords ->      LOW =     1           0
+	# The QR Code can tolerate about 15% erroneous codewords ->   MEDIUM =     0           1
+	# The QR Code can tolerate about 25% erroneous codewords -> QUARTILE =     3           2
+	# The QR Code can tolerate about 30% erroneous codewords ->     HIGH =     2           3
 
 	hidden [EccEnum] $internalEcl
 
@@ -61,10 +62,7 @@ class Ecc{
             "MEDIUM" { $tmpEcl.setEccValue(3) }
             "QUARTILE" { $tmpEcl.setEccValue(2) }
             Default {
-                # TODO_throw
-                # TODO_New
-				Write-Error -Message "overHigh" -ErrorAction Stop
-				throw "overHigh"
+                throw "getHigherEcc was called on a already HIGH Ecc"
             }
         }
         return $tmpEcl
@@ -78,10 +76,7 @@ class Ecc{
             "QUARTILE" { $tmpEcl.setEccValue(0) }
             "MEDIUM" { $tmpEcl.setEccValue(1) }
             Default {
-                # TODO_throw
-                # TODO_New
-				Write-Error -Message "underLow" -ErrorAction Stop
-				throw "underLow"
+                throw "getLowerEcc was called on a already LOW Ecc"
             }
         }
         return $tmpEcl
@@ -161,9 +156,7 @@ class Mode{
 	{
 		if (([QrCodeGlobal]::MIN_VERSION -gt $ver) -or ($ver -gt [QrCodeGlobal]::MAX_VERSION))
         {
-            # TODO_throw
-			Write-Error -Message "IllegalArgumentException(Invalid value)" -ErrorAction Stop
-			throw "IllegalArgumentException(Invalid value)"
+			throw "Version is not a valid value. It must range from "+[QrCodeGlobal]::MIN_VERSION+" to "+[QrCodeGlobal]::MAX_VERSION
         }
 		return $this.numBitsCharCount[[Math]::truncate(($ver + 7) / 17)]
 	}
@@ -222,16 +215,6 @@ class QrCodeGlobal {
 	# The set of all legal characters in alphanumeric mode, where
 	# each character value maps to the index in the string.
 	static [string] $ALPHANUMERIC_CHARSET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:"
-	
-	# _MASK_PATTERNS = (
-	# 	(lambda x, y:  (x + y) % 2                  ),
-	# 	(lambda x, y:  y % 2                        ),
-	# 	(lambda x, y:  x % 3                        ),
-	# 	(lambda x, y:  (x + y) % 3                  ),
-	# 	(lambda x, y:  (x // 3 + y // 2) % 2        ),
-	# 	(lambda x, y:  x * y % 2 + x * y % 3        ),
-	# 	(lambda x, y:  (x * y % 2 + x * y % 3) % 2  ),
-	# 	(lambda x, y:  ((x + y) % 2 + x * y % 3) % 2),
 
 }
 
@@ -271,10 +254,7 @@ class BitBuffer {
 	{
 		if($this.bitLength -lt 0)
 		{
-			# ToDo_throw
-			# ToDo_new
-			Write-Error -Message "AssertNegativeBitLength" -ErrorAction Stop
-			throw "AssertNegativeBitLength"
+			throw "Negative BitLength ("+$this.bitLength+") Reached"
 		}
 		return $this.bitLength
 	}
@@ -288,9 +268,7 @@ class BitBuffer {
 	{
 		if (($index -lt 0) -or ($index -ge $this.bitLength))
 		{
-			# ToDo_throw
-			Write-Error -Message "IndexOutOfBoundsException" -ErrorAction Stop
-			throw "IndexOutOfBoundsException"
+			throw "Requested Bit ("+$index+") is out of range (from 0 to "+$this.bitLength+")"
 		}
 		$retVal = 0
 		if($this.data[$index] -eq "1"){$retVal = 1}
@@ -343,15 +321,11 @@ class BitBuffer {
 	{
 		if ((($len -lt 0) -or ($len -gt 31) -or ($val -shr $len)) -ne 0)
 		{
-			# ToDo_throw
-			Write-Error -Message "IllegalArgumentException(Value out of range)" -ErrorAction Stop
-			throw "IllegalArgumentException(Value out of range)"
+			throw "len ("+$len+") is out of range or val can't fit in len bit"
 		}
 		if (([int]::MaxValue - $this.bitLength) -lt $len)
 		{
-			# ToDo_throw
-			Write-Error -Message "IllegalStateException(Maximum length reached)" -ErrorAction Stop
-			throw "IllegalStateException(Maximum length reached)"
+			throw "Maximum bitLength length reached when appending bits"
 		}
 		if($len -eq 0){return}
 		# for (int i = len - 1; i >= 0; i--, bitLength++)  // Append bit by bit
@@ -370,16 +344,11 @@ class BitBuffer {
 	{
 		if (-not $bb)
         {
-            # TODO_throw
-            # TODO_New
-			Write-Error -Message "emptyBb" -ErrorAction Stop
-			throw "emptyBb"
+            throw "bb to append is null"
         }
 		if (([int]::MaxValue - $this.bitLength) -lt $bb.getBitLength())
 		{
-			# ToDo_throw
-			Write-Error -Message "IllegalStateException(Maximum length reached)" -ErrorAction Stop
-			throw "IllegalStateException(Maximum length reached)"
+			throw "Maximum bitLength length reached when appending data"
 		}
 		$tmpStr = $bb.getAllData()
 
@@ -392,17 +361,11 @@ class BitBuffer {
 	{
 		if (-not $binStr)
         {
-            # TODO_throw
-            # TODO_New
-			Write-Error -Message "emptyBinStr" -ErrorAction Stop
-			throw "emptyBinStr"
+            throw "binStr to append is null"
         }
 		if (-not($binStr -match '^[01]+$'))
 		{
-			# ToDo_throw
-			# TODO_New
-			Write-Error -Message "IllegalCharInString" -ErrorAction Stop
-			throw "IllegalCharInString"
+			throw "binStr to append is not a binary string"
 		}
 		$this.data += $binStr
 		$this.bitLength += $binStr.Length
@@ -433,10 +396,7 @@ class QrSegment {
 	{
 		if (-not $data)
         {
-            # TODO_throw
-            # TODO_New
-			Write-Error -Message "emptyData" -ErrorAction Stop
-			throw "emptyData"
+            throw "data (Bytes) to forge segment is null"
 		}
 		[BitBuffer] $bb = New-Object 'BitBuffer'
 		foreach ($b in $data) {
@@ -456,15 +416,10 @@ class QrSegment {
 	{
 		if (-not $digits)
         {
-            # TODO_throw
-            # TODO_New
-			Write-Error -Message "emptyDigits" -ErrorAction Stop
-			throw "emptyDigits"
+            throw "digits (String) to forge segment is null"
 		}
 		if (-not ($digits -match '^\d+$')){
-            # TODO_throw
-			Write-Error -Message "IllegalArgumentException(String contains non-numeric characters)" -ErrorAction Stop
-			throw "IllegalArgumentException(String contains non-numeric characters)"
+            throw "digits to forge segment from is not a digital string"
 		}
 
 		[BitBuffer] $bb = New-Object 'BitBuffer'
@@ -489,18 +444,12 @@ class QrSegment {
 	{
 		if (-not $text)
         {
-            # TODO_throw
-            # TODO_New
-			Write-Error -Message "emptyText" -ErrorAction Stop
-			throw "emptyText"
+            throw "text (String) to forge segment is null"
 		}
 		
 		if ( -not ( $text -match [QrCodeGlobal]::ALPHANUMERIC_REGEX))
 		{
-			# TODO_throw
-            # TODO_New
-			Write-Error -Message "IllegalArgumentException(String contains unencodable characters in alphanumeric mode)" -ErrorAction Stop
-			throw "IllegalArgumentException(String contains unencodable characters in alphanumeric mode)"
+			throw "text (String) to forge segment from contains illegal characters"
 		}
 		
 		[BitBuffer] $bb = New-Object 'BitBuffer'
@@ -530,10 +479,7 @@ class QrSegment {
 	{
 		if (-not $text)
         {
-            # TODO_throw
-            # TODO_New
-			Write-Error -Message "emptyText" -ErrorAction Stop
-			throw "emptyText"
+            throw "text (String) to forge generic segment is null"
 		}
 		
 		# Select the most efficient segment encoding automatically
@@ -567,7 +513,7 @@ class QrSegment {
 	# @throws IllegalArgumentException if the value is outside the range [0, 10<sup>6</sup>)
 	static [QrSegment] makeEci([int] $assignVal)
 	{
-		# TODO_remove_throw
+		# TODO_Func
 		Write-Error -Message "Call_makeEci" -ErrorAction Stop
 		throw "Call_makeEci"
 
@@ -617,24 +563,16 @@ class QrSegment {
 	{
 		if (-not $md)
         {
-            # TODO_throw
-            # TODO_New
-			Write-Error -Message "emptyMode" -ErrorAction Stop
-			throw "emptyMode"
+            throw "md (Mode) is null"
 		}
 		$this.mode = $md
 		if (-not $data)
         {
-            # TODO_throw
-            # TODO_New
-			Write-Error -Message "emptyData" -ErrorAction Stop
-			throw "emptyData"
+            throw "data (BitBuffer) is null"
 		}
 		if ($numCh -lt 0)
         {
-            # TODO_throw
-			Write-Error -Message "IllegalArgumentException(Invalid value)" -ErrorAction Stop
-			throw "IllegalArgumentException(Invalid value)"
+			throw "numCh must be greater than zero"
 		}
 		$this.numChars = $numCh
 		$this.data = $data.clone() # Make defensive copy
@@ -661,20 +599,14 @@ class QrSegment {
 	{
 		if (-not $segs)
 		{
-			# TODO_throw
-			# TODO_New
-			Write-Error -Message "emptySegs" -ErrorAction Stop
-			throw "emptySegs"
+			throw "segs (QrSegment[]) is null"
 		}
 		[long] $result = 0
 		foreach ($seg in $segs)
 		{
 			if (-not $seg)
 			{
-				# TODO_throw
-				# TODO_New
-				Write-Error -Message "emptySeg" -ErrorAction Stop
-				throw "emptySeg"
+				throw "inner seg (QrSegment) is null"
 			}
 			[int] $ccbits = $seg.mode.numCharCountBits($version)
 			if ($seg.numChars -ge (1 -shl $ccbits))
@@ -710,17 +642,11 @@ class QrCode {
     {
         if (-not $text)
         {
-            # TODO_throw
-            # TODO_New
-			Write-Error -Message "emptyText" -ErrorAction Stop
-			throw "emptyText"
+            throw "text (string) in encodeText is null"
         }
         if (-not $ecl)
         {
-            # TODO_throw
-            # TODO_New
-			Write-Error -Message "emptyEcl" -ErrorAction Stop
-			throw "emptyEcl"
+            throw "Ecl (Ecc) in encodeText is null"
         }
 		[QrSegment[]] $segs = [QrSegment]::makeSegments($text)
         return [QrCode]::encodeSegments($segs, $ecl)
@@ -742,19 +668,13 @@ class QrCode {
     {
 		if (-not $data)
         {
-            # TODO_throw
-            # TODO_New
-			Write-Error -Message "emptyData" -ErrorAction Stop
-			throw "emptyData"
+            throw "data (byte[]) in encodeBinary is null"
         }
         if (-not $ecl)
         {
-            # TODO_throw
-            # TODO_New
-			Write-Error -Message "emptyEcl" -ErrorAction Stop
-			throw "emptyEcl"
-        }
-        # TODO_Func makeBytes
+            throw "ecl (Ecc) in encodeBinary is null"
+		}
+		
 		[QrSegment] $seg = [QrSegment]::makeBytes($data)
         return [QrCode]::encodeSegments($seg, $ecl)
 	}
@@ -805,24 +725,16 @@ class QrCode {
 	static [QrCode] encodeSegments([QrSegment[]] $segs, [Ecc] $ecl, [int] $minVersion, [int] $maxVersion, [int] $mask, [boolean] $boostEcl) {
         if (-not $segs)
         {
-            # TODO_throw
-            # TODO_New
-			Write-Error -Message "emptySegs" -ErrorAction Stop
-			throw "emptySegs"
+            throw "segs (QrSegment[]) in encodeSegments is null"
         }
         if (-not $ecl)
         {
-            # TODO_throw
-            # TODO_New
-			Write-Error -Message "emptyEcl" -ErrorAction Stop
-			throw "emptyEcl"
+            throw "ecl (Ecc) in encodeSegments is null"
         }
 
         if ( -not ((([QrCodeGlobal]::MIN_VERSION -le $minVersion) -and ($minVersion -le $maxVersion) -and ($maxVersion -le [QrCodeGlobal]::MAX_VERSION)) -or ($mask -lt -1) -or ($mask -gt 7)))
         {
-            # TODO_throw
-			Write-Error -Message "IllegalArgumentException(Invalid value)" -ErrorAction Stop
-			throw "IllegalArgumentException(Invalid value)"
+            throw "invalid version or mask in encodeSegments"
         }
 		
 		
@@ -836,7 +748,6 @@ class QrCode {
             $tmpVersion++
 
 		    [int] $dataCapacityBits = [QrCode]::getNumDataCodewords($tmpVersion, $ecl) * 8 # Number of data bits available
-            # TODO_Func getTotalBits
             $dataUsedBits = [QrSegment]::getTotalBits($segs, $tmpVersion)
             if (($dataUsedBits -ne -1) -and ($dataUsedBits -le $dataCapacityBits))
             {
@@ -851,32 +762,28 @@ class QrCode {
                         $msg = "Data length = " + $dataUsedBits.toString() + " bits, Max capacity = " + $dataCapacityBits.toString() + " bits"
                     }
                     
-                    # TODO_throw
-					Write-Error -Message "DataTooLongException(msg)" -ErrorAction Stop
-					throw "DataTooLongException(msg)"
+					throw "$msg"
                 }
             }
         }
 
         if ($dataUsedBits -eq -1)
         {
-            # TODO_throw
-            # TODO_New
-			Write-Error -Message "errorAssertDataUsedBits" -ErrorAction Stop
-			throw "errorAssertDataUsedBits"
+            throw "dataUsedBits error in encodeSegments"
         }
 		
 		# Increase the error correction level while the data still fits in the current version number
         if($boostEcl)
         {
 			$nextEcl = $ecl
-            do {
+			while (-not $nextEcl.isMax())
+			{
 				$nextEcl = $nextEcl.getHigherEcc()
                 if ($dataUsedBits -le ([QrCode]::getNumDataCodewords($tmpVersion, $nextEcl) * 8))
                 {
                     $ecl.setEccValue($nextEcl.getEccValue())
 				}
-            } until($nextEcl.isMax())
+			}
         }
 		
         # Concatenate all segments to create the data bit string
@@ -893,10 +800,7 @@ class QrCode {
         
         if ($bb.getBitLength() -ne $dataUsedBits)
         {
-            # TODO_throw
-            # TODO_New
-			Write-Error -Message "errorAssertbbbitLength" -ErrorAction Stop
-			throw "errorAssertbbbitLength"
+            throw "bb.getBitLength must now be equal to dataUsedBits"
         }
 		
         # Add terminator and pad up to a byte if applicable
@@ -904,10 +808,7 @@ class QrCode {
 
         if ($bb.getBitLength() -gt $dataCapacityBits)
         {
-            # TODO_throw
-            # TODO_New
-			Write-Error -Message "errorAssertbbbitLength" -ErrorAction Stop
-			throw "errorAssertbbbitLength"
+            throw "bb.getBitLength cannot be greater than dataCapacityBits"
         }
 
 		$bb.appendBits(0,[Math]::Min(4,$dataCapacityBits - $bb.getBitLength()))
@@ -916,10 +817,7 @@ class QrCode {
 
         if (($bb.getBitLength() % 8) -ne 0)
         {
-            # TODO_throw
-            # TODO_New
-			Write-Error -Message "errorAssertBitLengthModulo" -ErrorAction Stop
-			throw "errorAssertBitLengthModulo"
+            throw "bb.getBitLength must be a multiple of 8"
         }
 		
 		# Pad with alternating bytes until data capacity is reached
@@ -933,8 +831,10 @@ class QrCode {
 		[byte[]] $dataCodewords = New-Object 'byte[]' $byteSize
 
         for ([int] $i = 0; $i -lt $byteSize; $i++) {
+			# ToDo_test
 			# Write-Host("BEFORE -- i : ",$i," --- bit : ",$bb.getBit($i)," --- (i >> 3) : ",($i -shr 3)," --- dcw[i>>3] : ",$datacodewords[$i -shr 3]," --- dcw : ",$datacodewords)
 			$dataCodewords[$i] = $bb.getByte($i)
+			# ToDo_test
             # Write-Host(" AFTER -- i : ",$i," --- bit : ",$bb.getBit($i)," --- (i >> 3) : ",($i -shr 3)," --- dcw[i>>3] : ",$datacodewords[$i -shr 3]," --- dcw : ",$datacodewords)
 		}
 
@@ -992,16 +892,12 @@ class QrCode {
 		# Check arguments and initialize fields
         if (($ver -lt [QrCodeGlobal]::MIN_VERSION) -or ($ver -gt [QrCodeGlobal]::MAX_VERSION))
         {
-            # TODO_throw
-			Write-Error -Message "IllegalArgumentException(Version value out of range)" -ErrorAction Stop
-			throw "IllegalArgumentException(Version value out of range)"
+			throw "version is out of range. Must range from "+[QrCodeGlobal]::MIN_VERSION+" to "+[QrCodeGlobal]::MAX_VERSION
         }
 		
         if (($msk -lt -1) -or ($msk -gt 7))
         {
-            # TODO_throw
-			Write-Error -Message "IllegalArgumentException(Mask value out of range)" -ErrorAction Stop
-			throw "IllegalArgumentException(Mask value out of range)"
+			throw "mask is out of range. Must range from 0 to 7 (or -1 to auto detect)"
         }
 
 		$this.version = $ver
@@ -1009,21 +905,20 @@ class QrCode {
         $this.errorCorrectionLevel = New-Object 'Ecc' $ecl;
         if (-not $dataCodewords)
         {
-            # TODO_throw
-            # TODO_New
-			Write-Error -Message "emptydataCodewords" -ErrorAction Stop
-			throw "emptydataCodewords"
+            throw "dataCodewords (byte[]) in QrCode is null"
         }
         $this.modules = New-Object 'boolean[][]' $this.size,$this.size # Initially all white
 		$this.isFunction = New-Object 'boolean[][]' $this.size,$this.size
 		
         # Compute ECC, draw modules, do masking
 		$this.drawFunctionPatterns()
+		# ToDo_test
 		# Write-Host $this.toString()
 		
 		[byte[]] $allCodewords = $this.addEccAndInterleave($dataCodewords)
 		
 		$this.drawCodewords($allCodewords)
+		# ToDo_test
 		# Write-Host $this.toString()
 
 		$this.mask = $this.handleConstructorMasking($msk)
@@ -1054,7 +949,7 @@ class QrCode {
 	# @return a new image representing this QR Code, with padding and scaling
 	# @throws IllegalArgumentException if the scale or border is out of range, or if
     # {scale, border, size} cause the image dimensions to exceed Integer.MAX_VALUE
-    # ToDo Export PNG
+    # ToDo_Func
 	# public BufferedImage toImage(int scale, int border) {
 	# 	if (scale <= 0 || border < 0)
 	# 		throw new IllegalArgumentException("Value out of range");
@@ -1119,7 +1014,7 @@ class QrCode {
 	# @param border the number of border modules to add, which must be non-negative
 	# @return a string representing this QR Code as an SVG XML document
 	# @throws IllegalArgumentException if the border is negative
-    # ToDo Export SVG
+    # ToDo_Func
 	# public String toSvgString(int border) {
 	# 	if (border < 0)
 	# 		throw new IllegalArgumentException("Border must be non-negative");
@@ -1203,10 +1098,7 @@ class QrCode {
 
         if (($bits -shr 15) -ne 0)
         {
-            # TODO_throw
-            # TODO_New
-			Write-Error -Message "errorAssertBitsZeroed15" -ErrorAction Stop
-			throw "errorAssertBitsZeroed15"
+            throw "bits must be less than 15 bits long"
         }
         
         # Draw first copy
@@ -1253,11 +1145,7 @@ class QrCode {
 
 		if (($bits -shr 18) -ne 0)
         {
-            # TODO_throw
-            # TODO_New
-			Write-Error -Message "errorAssertBitsZeroed18" -ErrorAction Stop
-			throw "errorAssertBitsZeroed18"
-			
+			throw "bits must be less than 18 bits long"
         }
         
         # Draw two copies
@@ -1323,17 +1211,12 @@ class QrCode {
     {
         if (-not $data)
         {
-            # TODO_throw
-            # TODO_New
-			Write-Error -Message "emptyData" -ErrorAction Stop
-			throw "emptyData"
+			throw "data (byte[]) in addEccAndInterleave is null"
 		}
 
         if ($data.length -ne [QrCode]::getNumDataCodewords($this.version, $this.errorCorrectionLevel))
         {
-            # TODO_throw
-			Write-Error -Message "IllegalArgumentException" -ErrorAction Stop
-			throw "IllegalArgumentException"
+			throw "data.length in addEccAndInterleave is not equal to getNumDataCodewords"
 		}
 		
 		# Calculate parameter numbers
@@ -1406,17 +1289,12 @@ class QrCode {
 	hidden drawCodewords([byte[]] $data) {
         if (-not $data)
         {
-            # TODO_throw
-			# TODO_New
-			Write-Error -Message "emptyData" -ErrorAction Stop
-            throw "emptyData"
+			throw "data (byte[]) in drawCodewords is null"
 		}
 		
 		if ($data.length -ne ([Math]::truncate([QrCode]::getNumRawDataModules($this.version) / 8)))
 		{
-			# TODO_throw
-			Write-Error -Message "IllegalArgumentException" -ErrorAction Stop
-			throw "IllegalArgumentException"
+			throw "data.length in drawCodewords is not equal to getNumRawDataModules"
 		}
 
 		[int] $i = 0 # Bit index into the data
@@ -1432,6 +1310,7 @@ class QrCode {
 					[boolean] $upward = (($right + 1) -band 2) -eq 0
 					[int] $y = $vert
 					if ($upward) {$y = ($this.size - 1 - $vert)} # Actual y coordinate
+					# ToDo_test
 					# Write-Host("upward : ",$upward," --- y : ",$y," --- x : ",$x," --- i : ",$i," --- data.length : ",$data.length)
 					if ( (-not ($this.isFunction[$y][$x])) -and ($i -lt ($data.length * 8)))
 					{
@@ -1445,10 +1324,7 @@ class QrCode {
 		}
 		if ($i -ne ($data.length * 8))
 		{
-			# TODO_throw
-			# TODO_New
-			Write-Error -Message "errorAssertIDataLenght" -ErrorAction Stop
-			throw "errorAssertIDataLenght"
+			throw "i in drawCodewords is not equal to data.length * 8"
 		}
     }
 	
@@ -1462,10 +1338,7 @@ class QrCode {
 	{
 		if(($msk -lt 0) -or ($msk -gt 7))
 		{
-			# TODO_throw
-			# TODO_New
-			Write-Error -Message "errorParameterInvalidMask" -ErrorAction Stop
-			throw "errorParameterInvalidMask"
+			throw "mask is out of range. Must range from 0 to 7 (-1 is not applicable here)"
 		}
 		
 		for([int] $y = 0; $y -lt $this.size; $y++)
@@ -1483,10 +1356,7 @@ class QrCode {
 					6 {$invert = (((($x * $y % 2) + ($x * $y % 3)) % 2) -eq 0)                            }
 					7 {$invert = ((((($x + $y) % 2) + ($x * $y % 3)) % 2) -eq 0)                          }
 					default {
-						# TODO_throw
-						# TODO_New
-						Write-Error -Message "errorSwitchAssertInvalidMask" -ErrorAction Stop
-						throw "errorSwitchAssertInvalidMask"
+						throw "mask is wierdly out of range. Must range from 0 to 7 (-1 is not applicable here)"
 					}
 				}
 				$this.modules[$y][$x] = $this.modules[$y][$x] -bxor ($invert -band (-not $this.isFunction[$y][$x]))
@@ -1508,6 +1378,7 @@ class QrCode {
 				$this.applyMask($i)
 				$this.drawFormatBits($i)
 				[int] $penalty = $this.getPenaltyScore()
+				# ToDo_test
 				# Write-Host "mask " + $i + " : " $penalty
 				if ($penalty -lt $minPenalty)
 				{
@@ -1520,10 +1391,7 @@ class QrCode {
 
 		if(($msk -lt 0) -or ($msk -gt 7))
 		{
-			# TODO_throw
-			# TODO_New
-			Write-Error -Message "errorAssertInvalidMask" -ErrorAction Stop
-			throw "errorAssertInvalidMask"
+			throw "mask is out of range in handleConstructorMasking. Must range from 0 to 7 (-1 is not applicable here)"
 		}
 		
 		# ToDo_test
@@ -1575,6 +1443,7 @@ class QrCode {
 			}
 			$result += ($this.finderPenaltyTerminateAndCount($runColor, $runX, $runHistory) * [QrCodeGlobal]::PENALTY_N3)
 		}
+		# ToDo_test
 		# Write-Host "1 - " + $result
 
 		# Adjacent modules in column having same color, and finder-like patterns
@@ -1610,6 +1479,7 @@ class QrCode {
 			}
 			$result += ($this.finderPenaltyTerminateAndCount($runColor, $runY, $runHistory) * [QrCodeGlobal]::PENALTY_N3)
 		}
+		# ToDo_test
 		# Write-Host "2 - " + $result
 		
 		# 2*2 blocks of modules having same color
@@ -1624,6 +1494,7 @@ class QrCode {
 				}
 			}
 		}
+		# ToDo_test
 		# Write-Host "3 - " + $result
 		
 		# Balance of black and white modules
@@ -1638,11 +1509,13 @@ class QrCode {
 			}
 		}
 		[int] $total = $this.size * $this.size # Note that size is odd, so black/total != 1/2
+		# ToDo_test
 		# Write-Host "4 - " + $result
 
 		# Compute the smallest integer k >= 0 such that (45-5k)% <= black/total <= (55+5k)%
 		[int] $k = [math]::Truncate(([math]::Abs(($black * 20) - ($total * 10)) + $total - 1) / $total) - 1
 		$result += $k * [QrCodeGlobal]::PENALTY_N4
+		# ToDo_test
 		# Write-Host "5 - " + $result
 
 		return $result
@@ -1696,9 +1569,7 @@ class QrCode {
 	{
 		if (($ver -lt [QrCodeGlobal]::MIN_VERSION) -or ($ver -gt [QrCodeGlobal]::MAX_VERSION))
         {
-            # TODO_throw
-			Write-Error -Message "IllegalArgumentException(Version value out of range)" -ErrorAction Stop
-			throw "IllegalArgumentException(Version value out of range)"
+			throw "Version in getNumRawDataModules is not a valid value. It must range from "+[QrCodeGlobal]::MIN_VERSION+" to "+[QrCodeGlobal]::MAX_VERSION
 		}
 		
 		$result = (((16 * $ver) + 128) * $ver) + 64
@@ -1714,10 +1585,7 @@ class QrCode {
 		}
 		if(($result -lt 208) -or ($result -gt 29648))
 		{
-			# TODO_throw
-			# TODO_New
-			Write-Error -Message "errorAssertResultOutOfRange" -ErrorAction Stop
-			throw "errorAssertResultOutOfRange"
+			throw "result in getNumRawDataModules is not a valid value. It must range from 208 to 29648"
 		}
 		return $result
 	}
@@ -1729,9 +1597,7 @@ class QrCode {
 	{
 		if (($degree -lt 1) -or ($degree -gt 255))
 		{
-			# TODO_throw
-			Write-Error -Message "IllegalArgumentException(Degree out of range)" -ErrorAction Stop
-			throw "IllegalArgumentException(Degree out of range)"
+			throw "degree in reedSolomonComputeDivisor is not a valid value. It must range from 1 to 255"
 		}
 		# Polynomial coefficients are stored from highest to lowest power, excluding the leading term which is always 1.
 		# For example the polynomial x^3 + 255x^2 + 8x + 93 is stored as the uint8 array {255, 8, 93}.
@@ -1765,17 +1631,11 @@ class QrCode {
 	{
 		if (-not $data)
 		{
-			# TODO_throw
-			# TODO_New
-			Write-Error -Message "emptyData" -ErrorAction Stop
-			throw "emptyData"
+			throw "data (byte[]) in reedSolomonComputeRemainder is null"
 		}
 		if (-not $divisor)
 		{
-			# TODO_throw
-			# TODO_New
-			Write-Error -Message "emptyDivisor" -ErrorAction Stop
-			throw "emptyDivisor"
+			throw "divisor (byte[]) in reedSolomonComputeRemainder is null"
 		}
 		[byte[]] $result = New-Object 'byte[]' $divisor.length
 		foreach ($b in $data) # Polynomial division
@@ -1809,10 +1669,7 @@ class QrCode {
 	{
 		if ((($x -shr 8) -ne 0) -or (($y -shr 8) -ne 0))
 		{
-			# TODO_throw
-			# TODO_New
-			Write-Error -Message "errorAssertXYOutOfRange" -ErrorAction Stop
-			throw "errorAssertXYOutOfRange"
+			throw "x and y in reedSolomonMultiply must be less than 8 bits long"
 		}
 		# Russian peasant multiplication
 		[int] $z = 0
@@ -1823,10 +1680,7 @@ class QrCode {
 		}
 		if (($z -shr 8) -ne 0)
 		{
-			# TODO_throw
-			# TODO_New
-			Write-Error -Message "errorAssertZOutOfRange" -ErrorAction Stop
-			throw "errorAssertZOutOfRange"
+			throw "z in reedSolomonMultiply got above 8 bits long"
 		}
 		return $z
 	}
@@ -1848,10 +1702,7 @@ class QrCode {
 		[int] $n = $runHistory[1]
 		if ($n -gt ($this.size * 3))
 		{
-			# TODO_throw
-			# TODO_New
-			Write-Error -Message "errorAssertNOutOfRange" -ErrorAction Stop
-			throw "errorAssertNOutOfRange"
+			throw "runHistory[1] in finderPenaltyCountPatterns is out of range. It must be less than (this.size * 3)"
 		}
 		
 		[boolean] $core = (($n -gt 0) -and ($runHistory[2] -eq $n) -and ($runHistory[3] -eq ($n * 3)) -and ($runHistory[4] -eq $n) -and ($runHistory[5] -eq $n))
@@ -1914,7 +1765,7 @@ class QrCode {
 # $text = "123456"
 # $text = "12345678901234567890123456789012345678901234567890"
 # $text = "123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890"
-# $text = "123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890"     # User-supplied Unicode text
+# $text = "A1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890"
 # $text = "ABCD"
 $text = "HTTPS://DUVAL.PARIS"
 
@@ -1924,6 +1775,10 @@ $bytes = $enc.GetBytes($text)
 # New-Object 'QrCode' [int] $ver, [Ecc] $ecl, [byte[]] $dataCodewords, [int] $msk
 
 # $tmp = New-Object 'QrCode'  8, $ecl, $bytes, 0
+# ToDo_test
 # Write-Host $tmp.toString()
 
 [QrCode]::encodeText($text, $ecl).toString()
+
+# $qr = [QrCode]::encodeText("DOLLAR-AMOUNT:`$39.87 PERCENTAGE:100.00% OPERATIONS:+-*/", [Ecc]::HIGH())
+# $qr.toString()
