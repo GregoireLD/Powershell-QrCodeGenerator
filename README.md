@@ -28,6 +28,7 @@ $myQR = New-QrCode -text "GLD DEMO"
 #### Binary/Unicode Mode
 ```powershell
 (New-QrCode -text ("" + ([char]0x3053) + ([char]0x3093) + ([char]0x306B) + ([char]0x3061) + ([char]0x0077) + ([char]0x0061) + ([char]0x3001) + ([char]0x4E16) + ([char]0x754C) + ([char]0xFF01) + ([char]0x0020) + ([char]0x03B1) + ([char]0x03B2) + ([char]0x03B3) + ([char]0x03B4))).toString()
+```
 
 #### Kanji
 ```powershell
