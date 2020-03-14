@@ -153,8 +153,22 @@ class Mode{
 		$this.modeBits = $mode
 		$this.numBitsCharCount = $ccbits
 	}
-		
-		
+	
+	Mode([string] $mode){
+
+		switch ($mode) {
+            "NUMERIC" { $this.modeBits = 0x1 ; $this.numBitsCharCount = @( 10, 12, 14) }
+            "ALPHANUMERIC" { $this.modeBits = 0x2 ; $this.numBitsCharCount = @(  9, 11, 13) }
+			"BYTE" { $this.modeBits = 0x3 ; $this.numBitsCharCount = @(  8, 16, 16) }
+			"KANJI" { $this.modeBits = 0x8 ; $this.numBitsCharCount = @(  8, 10, 12) }
+			"ECI" { $this.modeBits = 0x7 ; $this.numBitsCharCount = @(  0,  0,  0) }
+            Default {
+                throw "Invalid Mode String"
+            }
+        }
+	}
+	
+	
 	# -- Method --
 
 	static [Mode] NUMERIC()      {return New-Object 'Mode' 0x1,@( 10, 12, 14)}
@@ -235,7 +249,7 @@ class QrCodeGlobal {
 
 }
 
-class BitBuffer {
+class QrBitBuffer {
 	# ---- Fields ----
 
 	hidden [string] $data
@@ -244,13 +258,13 @@ class BitBuffer {
 	# ---- Constructor ----
 
 	# Constructs an empty bit buffer (length 0).
-	BitBuffer()
+	QrBitBuffer()
 	{
 		$this.data = ""
 		$this.bitLength = 0
 	}
 
-	BitBuffer([int] $size)
+	QrBitBuffer([int] $size)
 	{
 		$this.data = ""
 		$this.bitLength = 0
@@ -261,7 +275,7 @@ class BitBuffer {
 		}
 	}
 	
-	BitBuffer([string] $binaryString)
+	QrBitBuffer([string] $binaryString)
 	{
 		if (-not($binaryString -match [QrCodeGlobal]::BINARY_REGEX))
 		{
@@ -394,7 +408,7 @@ class BitBuffer {
 	# @throws NullPointerException if the bit buffer is {@code null}
 	# @throws IllegalStateException if appending the data
 	# would make bitLength exceed Integer.MAX_VALUE
-	appendData([BitBuffer] $bb)
+	appendData([QrBitBuffer] $bb)
 	{
 		if (-not $bb)
         {
@@ -427,9 +441,9 @@ class BitBuffer {
 	
 	# Returns a new copy of this buffer.
 	# @return a new copy of this buffer (not {@code null})
-	[BitBuffer] clone()
+	[QrBitBuffer] clone()
 	{
-		[BitBuffer] $tmpBb = New-Object 'BitBuffer'
+		[QrBitBuffer] $tmpBb = New-Object 'QrBitBuffer'
 		$tmpBb.appendData($this)
 		return ($tmpBb)
 	}
@@ -452,7 +466,7 @@ class QrSegment {
         {
             throw "data (Bytes) to forge segment is null"
 		}
-		[BitBuffer] $bb = New-Object 'BitBuffer'
+		[QrBitBuffer] $bb = New-Object 'QrBitBuffer'
 		foreach ($b in $data) {
 			$bb.appendBits($b -band 0xFF,8)
 		}
@@ -476,7 +490,7 @@ class QrSegment {
             throw "digits to forge segment from is not a digital string"
 		}
 
-		[BitBuffer] $bb = New-Object 'BitBuffer'
+		[QrBitBuffer] $bb = New-Object 'QrBitBuffer'
 		for ([int] $i = 0; $i -lt $digits.length; ) # Consume up to 3 digits per iteration
 		{
 			[int] $n = [Math]::Min($digits.length - $i, 3)
@@ -506,7 +520,7 @@ class QrSegment {
 			throw "text (String) to forge segment from contains illegal characters"
 		}
 		
-		[BitBuffer] $bb = New-Object 'BitBuffer'
+		[QrBitBuffer] $bb = New-Object 'QrBitBuffer'
 		[int] $i = 0 # needed here for global persistance
 		for ($i = 0; $i -le ($text.length - 2); $i += 2) # Process groups of 2
 		{
@@ -571,7 +585,7 @@ class QrSegment {
 		Write-Error -Message "Call_makeEci" -ErrorAction Stop
 		throw "Call_makeEci"
 
-	# 	BitBuffer bb = new BitBuffer();
+	# 	QrBitBuffer bb = new QrBitBuffer();
 	# 	if (assignVal < 0)
 	# 		throw new IllegalArgumentException("ECI assignment value out of range");
 	# 	else if (assignVal < (1 << 7))
@@ -600,7 +614,7 @@ class QrSegment {
 	[int] $numChars
 	
 	# The data bits of this segment. Not null. Accessed through getData().
-	hidden [BitBuffer] $data
+	hidden [QrBitBuffer] $data
 	
 	
 	# ---- Constructor (low level) ----
@@ -613,21 +627,22 @@ class QrSegment {
 	#  * @param data the data bits (not {@code null})
 	#  * @throws NullPointerException if the mode or data is {@code null}
 	#  * @throws IllegalArgumentException if the character count is negative
-	QrSegment([Mode] $md, [int] $numCh, [BitBuffer] $data)
+	QrSegment([Mode] $md, [int] $numCh, [QrBitBuffer] $data)
 	{
 		if (-not $md)
         {
             throw "md (Mode) is null"
 		}
 		$this.mode = $md
-		if (-not $data)
-        {
-            throw "data (BitBuffer) is null"
-		}
 		if ($numCh -lt 0)
         {
 			throw "numCh must be greater than zero"
 		}
+		if (-not $data)
+        {
+            throw "data (QrBitBuffer) is null"
+		}
+		
 		$this.numChars = $numCh
 		$this.data = $data.clone() # Make defensive copy
 	}
@@ -637,8 +652,8 @@ class QrSegment {
 	
 	# Returns the data bits of this segment.
 	# @return a new copy of the data bits (not {@code null})
-	[BitBuffer] getData() {
-		[BitBuffer] $tmpBb = $this.data.clone()
+	[QrBitBuffer] getData() {
+		[QrBitBuffer] $tmpBb = $this.data.clone()
 		return $tmpBb # Make defensive copy
 	}
 	
@@ -851,7 +866,7 @@ class QrCode {
 		
         # Concatenate all segments to create the data bit string
         
-		[BitBuffer] $bb = New-Object 'BitBuffer'
+		[QrBitBuffer] $bb = New-Object 'QrBitBuffer'
         foreach ($seg in $segs)
         {
 			$bb.appendBits($seg.mode.modeBits, 4)
@@ -1825,7 +1840,8 @@ class QrCode {
 function New-QrCode {
 	[CmdletBinding()]
 	param (
-		[string] $text="Sample",
+		[Parameter(ParameterSetName="FromString")][string] $text="Sample",
+		[Parameter(ParameterSetName="FromSegments")][QrSegment[]] $segments,
 		[ValidateSet("LOW","MEDIUM","QUARTILE","HIGH")][string] $minimumEcc="LOW",
 		[ValidateRange(-1,7)][int] $forceMask=-1,
 		[switch] $disalowEccUpgrade
@@ -1833,5 +1849,39 @@ function New-QrCode {
 
 	[Ecc] $ecl = New-Object 'Ecc' $minimumEcc
 	
-	return ([QrCode]::encodeText($text, $ecl,$forceMask,-not $disalowEccUpgrade))
+	if($segments)
+	{
+		return ([QrCode]::encodeSegments($segments, $ecl,$forceMask,-not $disalowEccUpgrade))
+	}
+	else
+	{
+		return ([QrCode]::encodeText($text, $ecl,$forceMask,-not $disalowEccUpgrade))
+	}
+}
+
+function New-QrBitBuffer {
+	[CmdletBinding()]
+	param (
+		[string] $binaryString="0000000000000"
+	)
+
+	if (-not($binaryString -match [QrCodeGlobal]::BINARY_REGEX))
+		{
+			throw "binaryString to use is not a binary string"
+		}
+	
+	return (New-Object 'QrBitBuffer' $binaryString)
+}
+
+function New-QrSegment {
+	[CmdletBinding()]
+	param (
+		[ValidateSet("NUMERIC","ALPHANUMERIC","BYTE","KANJI","ECI")][string] $Type="KANJI",
+		[int] $numCh,
+		[QrBitBuffer] $data
+	)
+
+	[Mode] $md = New-Object 'Mode' $Type
+	
+	return (New-Object 'QrSegment' $md, $numCh, $data)
 }

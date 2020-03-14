@@ -116,6 +116,19 @@ class Ecc{
 		$this.internalEcl = $val.getEccValue()
 	}
 
+	Ecc([string] $val){
+
+		switch ($val) {
+            "LOW" { $this.internalEcl = "LOW" }
+            "QUARTILE" { $this.internalEcl = "QUARTILE" }
+			"MEDIUM" { $this.internalEcl = "MEDIUM" }
+			"HIGH" { $this.internalEcl = "HIGH" }
+            Default {
+                throw "Invalid ECC String"
+            }
+        }
+	}
+
 	static [Ecc] LOW()      {return New-Object 'Ecc' 1}
 	static [Ecc] MEDIUM()   {return New-Object 'Ecc' 0}
 	static [Ecc] QUARTILE() {return New-Object 'Ecc' 3}
@@ -140,8 +153,22 @@ class Mode{
 		$this.modeBits = $mode
 		$this.numBitsCharCount = $ccbits
 	}
-		
-		
+
+	Mode([string] $mode){
+
+		switch ($mode) {
+            "NUMERIC" { $this.modeBits = 0x1 ; $this.numBitsCharCount = @( 10, 12, 14) }
+            "ALPHANUMERIC" { $this.modeBits = 0x2 ; $this.numBitsCharCount = @(  9, 11, 13) }
+			"BYTE" { $this.modeBits = 0x3 ; $this.numBitsCharCount = @(  8, 16, 16) }
+			"KANJI" { $this.modeBits = 0x8 ; $this.numBitsCharCount = @(  8, 10, 12) }
+			"ECI" { $this.modeBits = 0x7 ; $this.numBitsCharCount = @(  0,  0,  0) }
+            Default {
+                throw "Invalid Mode String"
+            }
+        }
+	}
+	
+
 	# -- Method --
 
 	static [Mode] NUMERIC()      {return New-Object 'Mode' 0x1,@( 10, 12, 14)}
@@ -197,6 +224,10 @@ class QrCodeGlobal {
     @(0xFF, 1, 1, 2, 4, 4, 4, 5, 6, 8, 8, 11, 11, 16, 16, 18, 16, 19, 21, 25, 25, 25, 34, 30, 32, 35, 37, 40, 42, 45, 48, 51, 54, 57, 60, 63, 66, 70, 74, 77, 81)   # High
 	)
 
+
+	static [string] $BINARY_REGEX = "^[01]+$"
+
+
 		# ---- Constants ----
 	
 	# Describes precisely all strings that are encodable in numeric mode. To test whether a
@@ -218,7 +249,7 @@ class QrCodeGlobal {
 
 }
 
-class BitBuffer {
+class QrBitBuffer {
 	# ---- Fields ----
 
 	hidden [string] $data
@@ -227,13 +258,13 @@ class BitBuffer {
 	# ---- Constructor ----
 
 	# Constructs an empty bit buffer (length 0).
-	BitBuffer()
+	QrBitBuffer()
 	{
 		$this.data = ""
 		$this.bitLength = 0
 	}
 
-	BitBuffer([int] $size)
+	QrBitBuffer([int] $size)
 	{
 		$this.data = ""
 		$this.bitLength = 0
@@ -244,9 +275,9 @@ class BitBuffer {
 		}
 	}
 	
-	BitBuffer([string] $binaryString)
+	QrBitBuffer([string] $binaryString)
 	{
-		if (-not($binaryString -match '^[01]+$'))
+		if (-not($binaryString -match [QrCodeGlobal]::BINARY_REGEX))
 		{
 			throw "binaryString to use is not a binary string"
 		}
@@ -377,7 +408,7 @@ class BitBuffer {
 	# @throws NullPointerException if the bit buffer is {@code null}
 	# @throws IllegalStateException if appending the data
 	# would make bitLength exceed Integer.MAX_VALUE
-	appendData([BitBuffer] $bb)
+	appendData([QrBitBuffer] $bb)
 	{
 		if (-not $bb)
         {
@@ -400,7 +431,7 @@ class BitBuffer {
         {
             throw "binStr to append is null"
         }
-		if (-not($binStr -match '^[01]+$'))
+		if (-not($binStr -match [QrCodeGlobal]::BINARY_REGEX))
 		{
 			throw "binStr to append is not a binary string"
 		}
@@ -410,9 +441,9 @@ class BitBuffer {
 	
 	# Returns a new copy of this buffer.
 	# @return a new copy of this buffer (not {@code null})
-	[BitBuffer] clone()
+	[QrBitBuffer] clone()
 	{
-		[BitBuffer] $tmpBb = New-Object 'BitBuffer'
+		[QrBitBuffer] $tmpBb = New-Object 'QrBitBuffer'
 		$tmpBb.appendData($this)
 		return ($tmpBb)
 	}
@@ -435,7 +466,7 @@ class QrSegment {
         {
             throw "data (Bytes) to forge segment is null"
 		}
-		[BitBuffer] $bb = New-Object 'BitBuffer'
+		[QrBitBuffer] $bb = New-Object 'QrBitBuffer'
 		foreach ($b in $data) {
 			$bb.appendBits($b -band 0xFF,8)
 		}
@@ -459,7 +490,7 @@ class QrSegment {
             throw "digits to forge segment from is not a digital string"
 		}
 
-		[BitBuffer] $bb = New-Object 'BitBuffer'
+		[QrBitBuffer] $bb = New-Object 'QrBitBuffer'
 		for ([int] $i = 0; $i -lt $digits.length; ) # Consume up to 3 digits per iteration
 		{
 			[int] $n = [Math]::Min($digits.length - $i, 3)
@@ -484,12 +515,12 @@ class QrSegment {
             throw "text (String) to forge segment is null"
 		}
 		
-		if ( -not ( $text -match [QrCodeGlobal]::ALPHANUMERIC_REGEX))
+		if ( -not ( $text -cmatch [QrCodeGlobal]::ALPHANUMERIC_REGEX))
 		{
 			throw "text (String) to forge segment from contains illegal characters"
 		}
 		
-		[BitBuffer] $bb = New-Object 'BitBuffer'
+		[QrBitBuffer] $bb = New-Object 'QrBitBuffer'
 		[int] $i = 0 # needed here for global persistance
 		for ($i = 0; $i -le ($text.length - 2); $i += 2) # Process groups of 2
 		{
@@ -529,7 +560,7 @@ class QrSegment {
 		{
 			$result += ([QrSegment]::makeNumeric($text))
 		}
-		elseif ($text -match [QrCodeGlobal]::ALPHANUMERIC_REGEX )
+		elseif ($text -cmatch [QrCodeGlobal]::ALPHANUMERIC_REGEX )
 		{
 			$result += ([QrSegment]::makeAlphanumeric($text))
 		}
@@ -554,7 +585,7 @@ class QrSegment {
 		Write-Error -Message "Call_makeEci" -ErrorAction Stop
 		throw "Call_makeEci"
 
-	# 	BitBuffer bb = new BitBuffer();
+	# 	QrBitBuffer bb = new QrBitBuffer();
 	# 	if (assignVal < 0)
 	# 		throw new IllegalArgumentException("ECI assignment value out of range");
 	# 	else if (assignVal < (1 << 7))
@@ -583,7 +614,7 @@ class QrSegment {
 	[int] $numChars
 	
 	# The data bits of this segment. Not null. Accessed through getData().
-	hidden [BitBuffer] $data
+	hidden [QrBitBuffer] $data
 	
 	
 	# ---- Constructor (low level) ----
@@ -596,21 +627,22 @@ class QrSegment {
 	#  * @param data the data bits (not {@code null})
 	#  * @throws NullPointerException if the mode or data is {@code null}
 	#  * @throws IllegalArgumentException if the character count is negative
-	QrSegment([Mode] $md, [int] $numCh, [BitBuffer] $data)
+	QrSegment([Mode] $md, [int] $numCh, [QrBitBuffer] $data)
 	{
 		if (-not $md)
         {
             throw "md (Mode) is null"
 		}
 		$this.mode = $md
-		if (-not $data)
-        {
-            throw "data (BitBuffer) is null"
-		}
 		if ($numCh -lt 0)
         {
 			throw "numCh must be greater than zero"
 		}
+		if (-not $data)
+        {
+            throw "data (QrBitBuffer) is null"
+		}
+		
 		$this.numChars = $numCh
 		$this.data = $data.clone() # Make defensive copy
 	}
@@ -620,8 +652,8 @@ class QrSegment {
 	
 	# Returns the data bits of this segment.
 	# @return a new copy of the data bits (not {@code null})
-	[BitBuffer] getData() {
-		[BitBuffer] $tmpBb = $this.data.clone()
+	[QrBitBuffer] getData() {
+		[QrBitBuffer] $tmpBb = $this.data.clone()
 		return $tmpBb # Make defensive copy
 	}
 	
@@ -825,7 +857,7 @@ class QrCode {
 		
         # Concatenate all segments to create the data bit string
         
-		[BitBuffer] $bb = New-Object 'BitBuffer'
+		[QrBitBuffer] $bb = New-Object 'QrBitBuffer'
         foreach ($seg in $segs)
         {
 			$bb.appendBits($seg.mode.modeBits, 4)
@@ -1797,32 +1829,26 @@ class QrCode {
 #endregion Classes
 
 
-# [Ecc] $ecl = [Ecc]::LOW()
-[Ecc] $ecl = [Ecc]::QUARTILE()
-# $text = "1234"
-# $text = "123456"
-# $text = "12345678901234567890123456789012345678901234567890"
-# $text = "123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890"
-# $text = "A1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890"
-# $text = "ABCD"
-# $text = "DOLLAR-AMOUNT:`$39.87 PERCENTAGE:100.00% OPERATIONS:+-*/" ; $ecl = [Ecc]::HIGH()
-# $text = "" + ([char]0x3053) + ([char]0x3093) + ([char]0x306B) + ([char]0x3061) + ([char]0x0077) + ([char]0x0061) + ([char]0x3001) + ([char]0x4E16) + ([char]0x754C) + ([char]0xFF01) + ([char]0x0020) + ([char]0x03B1) + ([char]0x03B2) + ([char]0x03B3) + ([char]0x03B4); $ecl = [Ecc]::QUARTILE()
-# $text = "Alice was beginning to get very tired of sitting by her sister on the bank, " + "and of having nothing to do: once or twice she had peeped into the book her sister was reading, " + "but it had no pictures or conversations in it, 'and what is the use of a book,' thought Alice " + "'without pictures or conversations?' So she was considering in her own mind (as well as she could, " + "for the hot day made her feel very sleepy and stupid), whether the pleasure of making a " + "daisy-chain would be worth the trouble of getting up and picking the daisies, when suddenly " + "a White Rabbit with pink eyes ran close by her."; $ecl = [Ecc]::HIGH()
-# $text = "HTTPS://DUVAL.PARIS"
+[Ecc] $ecl = [Ecc]::LOW()
+$text = "1234"
+[QrCode]::encodeText($text, $ecl).toString()
 
-# New-Object 'QrCode' [int] $ver, [Ecc] $ecl, [byte[]] $dataCodewords, [int] $msk
+[QrCode]::encodeText("123456", [Ecc]::LOW()).toString()
+[QrCode]::encodeText("test", [Ecc]::LOW()).toString()
+[QrCode]::encodeText("12345678901234567890123456789012345678901234567890", [Ecc]::LOW()).toString()
+[QrCode]::encodeText("123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890", [Ecc]::LOW()).toString()
+[QrCode]::encodeText("A1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890", [Ecc]::LOW()).toString()
+[QrCode]::encodeText("ABCD", [Ecc]::LOW()).toString()
+[QrCode]::encodeText("DOLLAR-AMOUNT:`$39.87 PERCENTAGE:100.00% OPERATIONS:+-*/" , [Ecc]::HIGH()).toString()
+[QrCode]::encodeText(("" + ([char]0x3053) + ([char]0x3093) + ([char]0x306B) + ([char]0x3061) + ([char]0x0077) + ([char]0x0061) + ([char]0x3001) + ([char]0x4E16) + ([char]0x754C) + ([char]0xFF01) + ([char]0x0020) + ([char]0x03B1) + ([char]0x03B2) + ([char]0x03B3) + ([char]0x03B4)), [Ecc]::QUARTILE())
+[QrCode]::encodeText("Alice was beginning to get very tired of sitting by her sister on the bank, and of having nothing to do: once or twice she had peeped into the book her sister was reading, but it had no pictures or conversations in it, 'and what is the use of a book,' thought Alice 'without pictures or conversations?' So she was considering in her own mind (as well as she could, for the hot day made her feel very sleepy and stupid), whether the pleasure of making a daisy-chain would be worth the trouble of getting up and picking the daisies, when suddenly a White Rabbit with pink eyes ran close by her.",[Ecc]::HIGH()).toString()
+[QrCode]::encodeText("HTTPS://DUVAL.PARIS", [Ecc]::QUARTILE()).toString()
 
-# $tmp = New-Object 'QrCode'  8, $ecl, $bytes, 0
-# ToDo_test
-# Write-Host $tmp.toString()
-[BitBuffer] $kanjiCharBitsBB = New-Object 'BitBuffer' "00000001101011000000000010011111100000001010111011010101011010111000010101110000001010001110000100101001000000101100100001101111010000110001101000011000101000000001101100000101000001000010100010000000000000010000000000000000100100100100010010000000001001001001000000000000000001000001000000100000101000010001001100001000101010000000000000000100000100000001111111110000000001000"
+
+[QrBitBuffer] $kanjiCharBitsBB = New-Object 'QrBitBuffer' "00000001101011000000000010011111100000001010111011010101011010111000010101110000001010001110000100101001000000101100100001101111010000110001101000011000101000000001101100000101000001000010100010000000000000010000000000000000100100100100010010000000001001001001000000000000000001000001000000100000101000010001001100001000101010000000000000000100000100000001111111110000000001000"
 [int] $kanjiLen = [math]::Truncate($kanjiCharBitsBB.getBitLength() / 13)
 [Mode] $kanjiMode = [Mode]::KANJI()
 [Ecc] $kanjiEcc = [Ecc]::LOW()
 $segs = New-Object 'QrSegment' $kanjiMode, $kanjiLen, $kanjiCharBitsBB
 [QrCode]::encodeSegments($segs, $kanjiEcc).toString()
 
-# [QrCode]::encodeText($text, $ecl).toString()
-
-# $qr = [QrCode]::encodeText("DOLLAR-AMOUNT:`$39.87 PERCENTAGE:100.00% OPERATIONS:+-*/", [Ecc]::HIGH())
-# $qr.toString()
