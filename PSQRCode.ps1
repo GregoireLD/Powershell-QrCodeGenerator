@@ -1851,4 +1851,3 @@ $text = "1234"
 [Ecc] $kanjiEcc = [Ecc]::LOW()
 $segs = New-Object 'QrSegment' $kanjiMode, $kanjiLen, $kanjiCharBitsBB
 [QrCode]::encodeSegments($segs, $kanjiEcc).toString()
-
