@@ -1842,7 +1842,7 @@ function New-QrCode {
 	param (
 		[Parameter(ParameterSetName="FromString")][string] $text="Sample",
 		[Parameter(ParameterSetName="FromSegments")][QrSegment[]] $segments,
-		[ValidateSet("LOW","MEDIUM","QUARTILE","HIGH")][string] $minimumEcc="LOW",
+		[ValidateSet("LOW","MEDIUM","QUARTILE","HIGH")][string] $minimumEcc="MEDIUM",
 		[ValidateRange(-1,7)][int] $forceMask=-1,
 		[switch] $disalowEccUpgrade
 	)
