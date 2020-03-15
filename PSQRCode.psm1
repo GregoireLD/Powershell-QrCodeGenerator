@@ -1055,8 +1055,7 @@ class QrCode {
 	[string] toString([int] $borderSize) {
 		$output = ""
 
-		"""Prints the given QrCode object to the console."""
-		$borderSize
+		if($borderSize -lt 0){throw "borderSize must be equal or greater than 0"}
 
 		for ([int] $y = -$borderSize; $y -lt ($this.size + $borderSize); $y++)
 		{
@@ -1100,34 +1099,43 @@ class QrCode {
 	# @param border the number of border modules to add, which must be non-negative
 	# @return a string representing this QR Code as an SVG XML document
 	# @throws IllegalArgumentException if the border is negative
-    # ToDo_Func
-	# public String toSvgString(int border) {
-	# 	if (border < 0)
-	# 		throw new IllegalArgumentException("Border must be non-negative");
-	# 	long brd = border;
-	# 	StringBuilder sb = new StringBuilder()
-	# 		.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
-	# 		.append("<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n")
-	# 		.append(String.format("<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" viewBox=\"0 0 %1$d %1$d\" stroke=\"none\">\n",
-	# 			size + brd * 2))
-	# 		.append("\t<rect width=\"100%\" height=\"100%\" fill=\"#FFFFFF\"/>\n")
-	# 		.append("\t<path d=\"");
-	# 	for (int y = 0; y < size; y++) {
-	# 		for (int x = 0; x < size; x++) {
-	# 			if (getModule(x, y)) {
-	# 				if (x != 0 || y != 0)
-	# 					sb.append(" ");
-	# 				sb.append(String.format("M%d,%dh1v1h-1z", x + brd, y + brd));
-	# 			}
-	# 		}
-	# 	}
-	# 	return sb
-	# 		.append("\" fill=\"#000000\"/>\n")
-	# 		.append("</svg>\n")
-	# 		.toString();
-	# }
+	[String] toSvgString([int] $borderSize=4)
+	{
+		if($borderSize -lt 0){throw "borderSize must be equal or greater than 0"}
+		
+		[long] $brd = $borderSize
+		[long] $fullSize = $this.size + ($brd * 2)
+		[string] $sb = ""
+		$sb += "<?xml version=""1.0"" encoding=""UTF-8""?>`n"
+		$sb += "<!DOCTYPE svg PUBLIC ""-//W3C//DTD SVG 1.1//EN"" ""http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"">`n"
+		$sb += "<svg xmlns=""http://www.w3.org/2000/svg"" version=""1.1"" viewBox=""0 0 $fullSize $fullSize"" stroke=""none"">`n"
+		$sb += "`t<rect width=""100%"" height=""100%"" fill=""#FFFFFF""/>`n"
+		$sb += "`t<path d="""
+
+		for ([int] $y = 0; $y -lt $this.size; $y++)
+		{
+			for ([int] $x = 0; $x -lt $this.size; $x++)
+			{
+				if ($this.getModule($x, $y))
+				{
+					if (($x -ne 0) -or ($y -ne 0))
+					{
+						$sb += " "
+					}
+					$sb += "M$( $x + $brd ),$( $y + $brd )h1v1h-1z"
+				}
+			}
+		}
+
+		$sb += """ fill=""#000000""/>`n"
+		$sb += "</svg>`n"
+
+		return $sb
+	}
 	
-	
+	[string] toSvgString() {
+		return $this.toSvgString(4)
+	}
 	
 	# ---- Private helper methods for constructor: Drawing function modules ----
 	
@@ -1853,8 +1861,13 @@ function New-QrCode {
 		[ValidateSet("LOW","MEDIUM","QUARTILE","HIGH")][string] $minimumEcc="LOW",
 		[ValidateRange(-1,7)][int] $forceMask=-1,
 		[switch] $disalowEccUpgrade,
-		[switch] $asString
+		[switch] $asString,
+		[switch] $asSvgString,
+		[int] $stringBorder=4
 	)
+
+	if($asString -and $asSvgString){throw "asString and asSvgString are mutually exclusive"}
+	if($stringBorder -lt 0){throw "stringBorder must be equal or greater than zero"}
 
 	[Ecc] $ecl = New-Object 'Ecc' $minimumEcc
 	
@@ -1872,9 +1885,14 @@ function New-QrCode {
 
 	if($asString)
 	{
-		return ($tmpQr.toString())
+		return ($tmpQr.toString($stringBorder))
 	}
 	
+	if($asSvgString)
+	{
+		return ($tmpQr.toSvgString($stringBorder))
+	}
+
 	return ($tmpQr)
 }
 
