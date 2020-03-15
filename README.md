@@ -34,7 +34,7 @@ New-QrCode -text ("" + ([char]0x3053) + ([char]0x3093) + ([char]0x306B) + ([char
 #### Kanji
 ```powershell
 $bitBuff = New-QrBitBuffer "00000001101011000000000010011111100000001010111011010101011010111"
-$qrseg = @(New-QrSegment -Type KANJI -KanjiData $bitBuff)
+$qrseg = New-QrSegment -Type KANJI -KanjiData $bitBuff
 New-QrCode -segments $qrseg -asString
 ```
 
