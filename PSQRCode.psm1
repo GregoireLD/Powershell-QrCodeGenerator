@@ -1892,10 +1892,12 @@ function New-QrSegment {
 	switch ($Type) {
 		"KANJI"{[QrMode] $qrmd = New-Object 'QrMode' "KANJI" ; [int]$kanjiLen = [math]::Truncate($KanjiData.getBitLength()/13) ; return (New-Object 'QrSegment' $qrmd, $kanjiLen, $KanjiData)}
 		"ECI" {throw "ECI Not yet implemented"}
+		"BYTE" {return [QrSegment]::makeBytes( ([system.Text.Encoding]::UTF8).GetBytes($StringData) )}
+		"NUMERIC" {return [QrSegment]::makeNumeric($StringData)}
+		"ALPHANUMERIC" {return [QrSegment]::makeAlphanumeric($StringData)}
 		Default {} # AUTO
 	}
-
-	[QrSegment]::makeSegments($StringData)
 	
 	return ([QrSegment]::makeSegments($StringData))
 }
+
