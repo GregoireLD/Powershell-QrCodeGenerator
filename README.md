@@ -33,7 +33,7 @@ New-QrCode -text ("" + ([char]0x3053) + ([char]0x3093) + ([char]0x306B) + ([char
 
 #### Kanji
 ```powershell
-$bitBuff = New-QrBitBuffer "00000001101011000000000010011111100000001010111011010101011010111"
+$bitBuff = New-QrBitBuffer "1000000000010011111100000001010111011010101011010111"
 $qrseg = New-QrSegment -Type KANJI -KanjiData $bitBuff
 New-QrCode -segments $qrseg -asString
 ```
@@ -79,10 +79,11 @@ $tmpSegs = @()
 $tmpSegs += New-QrSegment -type ECI -EciType 3 # ISO/IEC 8859-1 Latin alphabet No. 1
 $tmpSegs += New-QrSegment -type BYTE -StringData ("" + ([char]0x3053) + ([char]0x3093) + ([char]0x306B) + ([char]0x3061))
 Write-output "Not the right encoding, but same payload, should display garbled characters"
+Write-output "Some readers ignore ECI flags, iPhone integrated reader seems to abide them"
 New-QrCode -segments $tmpSegs -minimumEcc LOW -asString
 ```
 
 #### Huge QrCode
 ```powershell
-New-QrCode -text "Alice was beginning to get very tired of sitting by her sister on the bank, and of having nothing to do: once or twice she had peeped into the book her sister was reading, but it had no pictures or conversations in it, 'and what is the use of a book,' thought Alice 'without pictures or conversations?' So she was considering in her own mind (as well as she could, for the hot day made her feel very sleepy and stupid), whether the pleasure of making a daisy-chain would be worth the trouble of getting up and picking the daisies, when suddenly a White Rabbit with pink eyes ran close by her." -minimumEcc MEDIUM -asString
+New-QrCode -text "Alice was beginning to get very tired of sitting by her sister on the bank, and of having nothing to do: once or twice she had peeped into the book her sister was reading, but it had no pictures or conversations in it, 'and what is the use of a book,' thought Alice 'without pictures or conversations?' So she was considering in her own mind (as well as she could, for the hot day made her feel very sleepy and stupid), whether the pleasure of making a daisy-chain would be worth the trouble of getting up and picking the daisies, when suddenly a White Rabbit with pink eyes ran close by her." -minimumEcc HIGH -asString
 ```
