@@ -1852,19 +1852,30 @@ function New-QrCode {
 		[Parameter(ParameterSetName="FromSegments")][QrSegment[]] $segments,
 		[ValidateSet("LOW","MEDIUM","QUARTILE","HIGH")][string] $minimumEcc="LOW",
 		[ValidateRange(-1,7)][int] $forceMask=-1,
-		[switch] $disalowEccUpgrade
+		[switch] $disalowEccUpgrade,
+		[switch] $asString
 	)
 
 	[Ecc] $ecl = New-Object 'Ecc' $minimumEcc
 	
+	[QrCode] $tmpQr = $null
+
 	if($segments)
 	{
-		return ([QrCode]::encodeSegments($segments, $ecl,$forceMask,-not $disalowEccUpgrade))
+		$tmpQr = [QrCode]::encodeSegments($segments, $ecl,$forceMask,-not $disalowEccUpgrade)
+
 	}
 	else
 	{
-		return ([QrCode]::encodeText($text, $ecl,$forceMask,-not $disalowEccUpgrade))
+		$tmpQr = [QrCode]::encodeText($text, $ecl,$forceMask,-not $disalowEccUpgrade)
 	}
+
+	if($asString)
+	{
+		return ($tmpQr.toString())
+	}
+	
+	return ($tmpQr)
 }
 
 function New-QrBitBuffer {
@@ -1897,7 +1908,7 @@ function New-QrSegment {
 		"ALPHANUMERIC" {return [QrSegment]::makeAlphanumeric($StringData)}
 		Default {} # AUTO
 	}
-	
+
 	return ([QrSegment]::makeSegments($StringData))
 }
 
