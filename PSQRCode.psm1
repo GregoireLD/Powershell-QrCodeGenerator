@@ -136,7 +136,7 @@ class Ecc{
 }
 
 # Describes how a segment's data bits are interpreted.
-class Mode{
+class QrMode{
 	# -- Fields --
 	
 	# The mode indicator bits, which is a uint4 value (range 0 to 15).
@@ -148,22 +148,22 @@ class Mode{
 		
 	# -- Constructor --
 		
-	hidden Mode([int] $mode, [int[]] $ccbits)
+	hidden QrMode([int] $qrmode, [int[]] $ccbits)
 	{
-		$this.modeBits = $mode
+		$this.modeBits = $qrmode
 		$this.numBitsCharCount = $ccbits
 	}
 	
-	Mode([string] $mode){
+	QrMode([string] $qrmode){
 
-		switch ($mode) {
+		switch ($qrmode) {
             "NUMERIC" { $this.modeBits = 0x1 ; $this.numBitsCharCount = @( 10, 12, 14) }
             "ALPHANUMERIC" { $this.modeBits = 0x2 ; $this.numBitsCharCount = @(  9, 11, 13) }
 			"BYTE" { $this.modeBits = 0x3 ; $this.numBitsCharCount = @(  8, 16, 16) }
 			"KANJI" { $this.modeBits = 0x8 ; $this.numBitsCharCount = @(  8, 10, 12) }
 			"ECI" { $this.modeBits = 0x7 ; $this.numBitsCharCount = @(  0,  0,  0) }
             Default {
-                throw "Invalid Mode String"
+                throw "Invalid QrMode String"
             }
         }
 	}
@@ -171,11 +171,11 @@ class Mode{
 	
 	# -- Method --
 
-	static [Mode] NUMERIC()      {return New-Object 'Mode' 0x1,@( 10, 12, 14)}
-	static [Mode] ALPHANUMERIC() {return New-Object 'Mode' 0x2,@(  9, 11, 13)}
-	static [Mode] BYTE()         {return New-Object 'Mode' 0x4,@(  8, 16, 16)}
-	static [Mode] KANJI()        {return New-Object 'Mode' 0x8,@(  8, 10, 12)}
-	static [Mode] ECI()          {return New-Object 'Mode' 0x7,@(  0,  0,  0)}
+	static [QrMode] NUMERIC()      {return New-Object 'QrMode' 0x1,@( 10, 12, 14)}
+	static [QrMode] ALPHANUMERIC() {return New-Object 'QrMode' 0x2,@(  9, 11, 13)}
+	static [QrMode] BYTE()         {return New-Object 'QrMode' 0x4,@(  8, 16, 16)}
+	static [QrMode] KANJI()        {return New-Object 'QrMode' 0x8,@(  8, 10, 12)}
+	static [QrMode] ECI()          {return New-Object 'QrMode' 0x7,@(  0,  0,  0)}
 
 	# Returns the bit width of the character count field for a segment in this mode
 	# in a QR Code at the given version number. The result is in the range [0, 16].
@@ -471,7 +471,7 @@ class QrSegment {
 			$bb.appendBits($b -band 0xFF,8)
 		}
 
-		return (New-Object 'QrSegment' ([Mode]::BYTE()),$data.Length,$bb )
+		return (New-Object 'QrSegment' ([QrMode]::BYTE()),$data.Length,$bb )
 	}
 	
 	
@@ -497,7 +497,7 @@ class QrSegment {
 			$bb.appendBits([int]::Parse($digits.Substring($i,$n)), ($n * 3) + 1)
 			$i += $n
 		}
-		return (New-Object 'QrSegment' ([Mode]::NUMERIC()), $digits.length , $bb)
+		return (New-Object 'QrSegment' ([QrMode]::NUMERIC()), $digits.length , $bb)
 	}
 	
 	
@@ -534,7 +534,7 @@ class QrSegment {
 			$bb.appendBits([QrCodeGlobal]::ALPHANUMERIC_CHARSET.IndexOf($text[$i]), 6)
 		}
 		
-		return (New-Object 'QrSegment' ([Mode]::ALPHANUMERIC()), $text.length , $bb)
+		return (New-Object 'QrSegment' ([QrMode]::ALPHANUMERIC()), $text.length , $bb)
 	}
 	
 	
@@ -581,24 +581,32 @@ class QrSegment {
 	# @throws IllegalArgumentException if the value is outside the range [0, 10<sup>6</sup>)
 	static [QrSegment] makeEci([int] $assignVal)
 	{
-		# TODO_Func
-		Write-Error -Message "Call_makeEci" -ErrorAction Stop
-		throw "Call_makeEci"
-
-	# 	QrBitBuffer bb = new QrBitBuffer();
-	# 	if (assignVal < 0)
-	# 		throw new IllegalArgumentException("ECI assignment value out of range");
-	# 	else if (assignVal < (1 << 7))
-	# 		bb.appendBits(assignVal, 8);
-	# 	else if (assignVal < (1 << 14)) {
-	# 		bb.appendBits(2, 2);
-	# 		bb.appendBits(assignVal, 14);
-	# 	} else if (assignVal < 1_000_000) {
-	# 		bb.appendBits(6, 3);
-	# 		bb.appendBits(assignVal, 21);
-	# 	} else
-	# 		throw new IllegalArgumentException("ECI assignment value out of range");
-	# 	return new QrSegment(Mode.ECI, 0, bb);
+		[QrBitBuffer] $bb = New-Object 'QrBitBuffer'
+		
+		if ($assignVal -lt 0)
+		{
+			throw "ECI assignment value out of range"
+		}
+		elseif ($assignVal -lt (1 -shl 7))
+		{
+			$bb.appendBits($assignVal, 8)
+		}
+		elseif ($assignVal -lt (1 -shl 14))
+		{
+			$bb.appendBits(2, 2)
+			$bb.appendBits($assignVal, 14)
+		}
+		elseif ($assignVal -lt 1000000)
+		{
+			$bb.appendBits(6, 3)
+			$bb.appendBits($assignVal, 21)
+		}
+		else
+		{
+			throw "ECI assignment value out of range"
+		}
+		
+		return New-Object 'QrSegment' ([QrMode]::ECI()), 0, $bb
 	}
 	
 	
@@ -606,7 +614,7 @@ class QrSegment {
 	# ---- Instance fields ----
 	
 	# The mode indicator of this segment. Not {@code null}. */
-	[Mode] $mode
+	[QrMode] $qrmode
 	
 	# The length of this segment's unencoded data. Measured in characters for
 	# numeric/alphanumeric/kanji mode, bytes for byte mode, and 0 for ECI mode.
@@ -627,13 +635,13 @@ class QrSegment {
 	#  * @param data the data bits (not {@code null})
 	#  * @throws NullPointerException if the mode or data is {@code null}
 	#  * @throws IllegalArgumentException if the character count is negative
-	QrSegment([Mode] $md, [int] $numCh, [QrBitBuffer] $data)
+	QrSegment([QrMode] $qrmd, [int] $numCh, [QrBitBuffer] $data)
 	{
-		if (-not $md)
+		if (-not $qrmd)
         {
             throw "md (Mode) is null"
 		}
-		$this.mode = $md
+		$this.qrmode = $qrmd
 		if ($numCh -lt 0)
         {
 			throw "numCh must be greater than zero"
@@ -677,7 +685,7 @@ class QrSegment {
 			{
 				throw "inner seg (QrSegment) is null"
 			}
-			[int] $ccbits = $seg.mode.numCharCountBits($version)
+			[int] $ccbits = $seg.qrmode.numCharCountBits($version)
 			if ($seg.numChars -ge (1 -shl $ccbits))
 			{
 				return -1 # The segment's length doesn't fit the field's bit width
@@ -869,9 +877,9 @@ class QrCode {
 		[QrBitBuffer] $bb = New-Object 'QrBitBuffer'
         foreach ($seg in $segs)
         {
-			$bb.appendBits($seg.mode.modeBits, 4)
+			$bb.appendBits($seg.qrmode.modeBits, 4)
 			
-			$bb.appendBits($seg.numChars, $seg.mode.numCharCountBits($tmpVersion))
+			$bb.appendBits($seg.numChars, $seg.qrmode.numCharCountBits($tmpVersion))
 
 			$bb.appendData($seg.getData())
         }
@@ -1876,12 +1884,18 @@ function New-QrBitBuffer {
 function New-QrSegment {
 	[CmdletBinding()]
 	param (
-		[ValidateSet("NUMERIC","ALPHANUMERIC","BYTE","KANJI","ECI")][string] $Type="KANJI",
-		[int] $numCh,
-		[QrBitBuffer] $data
+		[ValidateSet("AUTO","NUMERIC","ALPHANUMERIC","BYTE","KANJI","ECI")][string] $Type="AUTO",
+		[QrBitBuffer] $KanjiData,
+		[string] $StringData
 	)
 
-	[Mode] $md = New-Object 'Mode' $Type
+	switch ($Type) {
+		"KANJI"{[QrMode] $qrmd = New-Object 'QrMode' "KANJI" ; [int]$kanjiLen = [math]::Truncate($KanjiData.getBitLength()/13) ; return (New-Object 'QrSegment' $qrmd, $kanjiLen, $KanjiData)}
+		"ECI" {throw "ECI Not yet implemented"}
+		Default {} # AUTO
+	}
+
+	[QrSegment]::makeSegments($StringData)
 	
-	return (New-Object 'QrSegment' $md, $numCh, $data)
+	return ([QrSegment]::makeSegments($StringData))
 }

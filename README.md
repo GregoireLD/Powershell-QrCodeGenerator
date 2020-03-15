@@ -33,13 +33,33 @@ $myQR = New-QrCode -text "GLD DEMO"
 #### Kanji
 ```powershell
 $bitBuff = New-QrBitBuffer "00000001101011000000000010011111100000001010111011010101011010111"
-$qrseg = New-QrSegment -Type KANJI -numCh 5 -data $bitBuff
+$qrseg = New-QrSegment -Type KANJI -KanjiData $bitBuff
 (New-QrCode -segments $qrseg).toString()
 ```
 
 #### with parameters
 ```powershell
 (New-QrCode -text "https:\\duval.paris" -minimumEcc MEDIUM -disalowEccUpgrade).toString()
+```
+
+#### multi-typed segment Demo (Partial Support)
+```powershell
+$strGolden0 = "Golden ratio + " + ([char]0x03C6) + " = 1."
+$strGolden1 = "6180339887498948482045868343656381177203091798057628621354486227052604628189024497072072041893911374"
+$strGolden2 = "......"
+
+(New-QrCode -text ($strGolden0 + $strGolden1 + $strGolden2) -minimumEcc LOW).toString()
+
+$tmpSegs = @()
+$tmpSegs += New-QrSegment -Type BYTE -StringData $strGolden0
+$tmpSegs += New-QrSegment -Type NUMERIC -StringData $strGolden1
+$tmpSegs += New-QrSegment -Type ALPHANUMERIC -StringData $strGolden2
+(New-QrCode -segments $tmpSegs -minimumEcc LOW).toString()
+```
+
+#### ECI Demo (Partial Support)
+```powershell
+# ToDo
 ```
 
 #### Huge QrCode
