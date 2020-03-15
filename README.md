@@ -67,9 +67,19 @@ Write-output "Same Optimised Multi-typed Version using auto-detection"
 New-QrCode -segments $tmpSegs -minimumEcc LOW -asString
 ```
 
-#### ECI Demo (Partial Support)
+#### ECI Demo
 ```powershell
-# ToDo
+$tmpSegs = @()
+$tmpSegs += New-QrSegment -type ECI -EciType 26 # UTF8 Encoding marker
+$tmpSegs += New-QrSegment -type BYTE -StringData ("" + ([char]0x3053) + ([char]0x3093) + ([char]0x306B) + ([char]0x3061))
+Write-output "Appropriate encoding, should display japanese characters"
+New-QrCode -segments $tmpSegs -minimumEcc LOW -asString
+
+$tmpSegs = @()
+$tmpSegs += New-QrSegment -type ECI -EciType 3 # ISO/IEC 8859-1 Latin alphabet No. 1
+$tmpSegs += New-QrSegment -type BYTE -StringData ("" + ([char]0x3053) + ([char]0x3093) + ([char]0x306B) + ([char]0x3061))
+Write-output "Not the right encoding, but same payload, should display garbled characters"
+New-QrCode -segments $tmpSegs -minimumEcc LOW -asString
 ```
 
 #### Huge QrCode

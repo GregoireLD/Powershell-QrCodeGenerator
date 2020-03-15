@@ -1897,15 +1897,32 @@ function New-QrSegment {
 	param (
 		[ValidateSet("AUTO","NUMERIC","ALPHANUMERIC","BYTE","KANJI","ECI")][string] $Type="AUTO",
 		[QrBitBuffer] $KanjiData,
-		[string] $StringData
+		[string] $StringData,
+		[int] $EciType
 	)
+	
+	if(($Type -eq "KANJI") -and (-not $KanjiData)){throw "KanjiData is mandatory in Kanji mode"}
+	if(($Type -eq "ECI") -and (-not $EciType)){throw "EciType is mandatory in ECI mode"}
+	if((($Type -eq "AUTO") -or ($Type -eq "NUMERIC") -or ($Type -eq "ALPHANUMERIC") -or ($Type -eq "BYTE")) -and (-not $StringData)){throw "StringData is mandatory in this mode"}
 
 	switch ($Type) {
-		"KANJI"{[QrMode] $qrmd = New-Object 'QrMode' "KANJI" ; [int]$kanjiLen = [math]::Truncate($KanjiData.getBitLength()/13) ; return (New-Object 'QrSegment' $qrmd, $kanjiLen, $KanjiData)}
-		"ECI" {throw "ECI Not yet implemented"}
-		"BYTE" {return [QrSegment]::makeBytes( ([system.Text.Encoding]::UTF8).GetBytes($StringData) )}
-		"NUMERIC" {return [QrSegment]::makeNumeric($StringData)}
-		"ALPHANUMERIC" {return [QrSegment]::makeAlphanumeric($StringData)}
+		"KANJI" {
+			[QrMode] $qrmd = New-Object 'QrMode' "KANJI"
+			[int]$kanjiLen = [math]::Truncate($KanjiData.getBitLength()/13)
+			return (New-Object 'QrSegment' $qrmd, $kanjiLen, $KanjiData)
+			}
+		"ECI" {
+			return [QrSegment]::makeEci($EciType)
+			}
+		"BYTE" {
+			return [QrSegment]::makeBytes( ([system.Text.Encoding]::UTF8).GetBytes($StringData) )
+			}
+		"NUMERIC" {
+			return [QrSegment]::makeNumeric($StringData)
+			}
+		"ALPHANUMERIC" {
+			return [QrSegment]::makeAlphanumeric($StringData)
+			}
 		Default {} # AUTO
 	}
 
