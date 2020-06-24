@@ -10,7 +10,7 @@ and the psd1 files, must be in one of your default Powershell Modules folder.
 You can check what they are using :
 
 ```powershell
-echo $env:PSModulePath
+Write-Output $env:PSModulePath
 ```
 
 ### Manual Loading :
