@@ -8,16 +8,17 @@ QrCode Generator, mainly inspired by Nayuki's "QR-Code-generator", fully reimple
 To use this module, the "Powershell-QrCodeGenerator" folder, contaning both the psm1
 and the psd1 files, must be in one of your default Powershell Modules folder.
 You can check what they are using :
-`$env:PSModulePath`
+
+```powershell
+echo $env:PSModulePath
+```
 
 ### Manual Loading :
 
 You can also manually enable it using the folowing command :
 
-`Import-Module <Path_to_the_Powershell-QrCodeGenerator.psm1_file>`
-
 ```powershell
-Import-Module .\PSQRCode.psm1
+Import-Module <Path_to_the_Powershell-QrCodeGenerator.psm1_file>
 ```
 
 ### Various QrCode :
