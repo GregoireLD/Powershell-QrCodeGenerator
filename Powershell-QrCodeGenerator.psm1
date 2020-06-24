@@ -1910,7 +1910,8 @@ function New-QrBitBuffer {
 	return (New-Object 'QrBitBuffer' $binaryString)
 }
 
-function New-QrSegment {
+function New-QrSegment
+{
 	[CmdletBinding()]
 	param (
 		[ValidateSet("AUTO","NUMERIC","ALPHANUMERIC","BYTE","KANJI","ECI")][string] $Type="AUTO",
