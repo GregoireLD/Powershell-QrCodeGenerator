@@ -1,4 +1,4 @@
-﻿#region Enumerations
+#region Enumerations
 enum EccEnum{
     LOW = 1
     MEDIUM = 0
@@ -725,9 +725,9 @@ class QrCode {
         {
             throw "Ecl (Ecc) in encodeText is null"
 		}
-		if(($mask -lt -1) -or ($mask -gt 7))
+		if(($mask -lt -2) -or ($mask -gt 7))
         {
-            throw "mask is out of range. Must range from 0 to 7 (or -1 to auto detect)"
+            throw "mask is out of range. Must range from 0 to 7 (or -1 to auto detect ; -2 to disable masking)"
 		}
 
 		[QrSegment[]] $segs = [QrSegment]::makeSegments($text)
@@ -756,9 +756,9 @@ class QrCode {
         {
             throw "ecl (Ecc) in encodeBinary is null"
 		}
-		if(($mask -lt -1) -or ($mask -gt 7))
+		if(($mask -lt -2) -or ($mask -gt 7))
         {
-            throw "mask is out of range. Must range from 0 to 7 (or -1 to auto detect)"
+            throw "mask is out of range. Must range from 0 to 7 (or -1 to auto detect ; -2 to disable masking)"
 		}
 		
 		[QrSegment] $seg = [QrSegment]::makeBytes($data)
@@ -981,9 +981,9 @@ class QrCode {
 			throw "version is out of range. Must range from "+[QrCodeGlobal]::MIN_VERSION+" to "+[QrCodeGlobal]::MAX_VERSION
         }
 		
-        if (($msk -lt -1) -or ($msk -gt 7))
+        if (($msk -lt -2) -or ($msk -gt 7))
         {
-			throw "mask is out of range. Must range from 0 to 7 (or -1 to auto detect)"
+			throw "mask is out of range. Must range from 0 to 7 (or -1 to auto detect ; -2 to disable masking)"
         }
 
 		$this.version = $ver
@@ -1464,6 +1464,11 @@ class QrCode {
 	# This method applies and returns the actual mask chosen, from 0 to 7.
 	hidden [int] handleConstructorMasking([int] $msk)
 	{
+		if($msk -eq -2)
+		{
+			return -2
+		}
+
 		if ($msk -eq -1) # Automatically choose best mask
 		{
 			[int] $minPenalty = [int]::MaxValue
@@ -1859,10 +1864,11 @@ function New-QrCode {
 		[Parameter(ParameterSetName="FromString")][string] $text="Sample",
 		[Parameter(ParameterSetName="FromSegments")][QrSegment[]] $segments,
 		[ValidateSet("LOW","MEDIUM","QUARTILE","HIGH")][string] $minimumEcc="LOW",
-		[ValidateRange(-1,7)][int] $forceMask=-1,
+		[ValidateRange(-2,7)][int] $forceMask=-1,
 		[switch] $disalowEccUpgrade,
 		[switch] $asString,
 		[switch] $asSvgString,
+		[switch] $noMask,
 		[int] $stringBorder=4
 	)
 
@@ -1872,6 +1878,10 @@ function New-QrCode {
 	[Ecc] $ecl = New-Object 'Ecc' $minimumEcc
 	
 	[QrCode] $tmpQr = $null
+
+	if($noMask){
+		$forceMask = -2
+	}
 
 	if($segments)
 	{
@@ -1947,4 +1957,3 @@ function New-QrSegment
 
 	return ([QrSegment]::makeSegments($StringData))
 }
-
