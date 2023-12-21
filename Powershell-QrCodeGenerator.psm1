@@ -1109,7 +1109,7 @@ class QrCode {
 		$sb += "<?xml version=""1.0"" encoding=""UTF-8""?>`n"
 		$sb += "<!DOCTYPE svg PUBLIC ""-//W3C//DTD SVG 1.1//EN"" ""http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"">`n"
 		$sb += "<svg xmlns=""http://www.w3.org/2000/svg"" version=""1.1"" viewBox=""0 0 $fullSize $fullSize"" stroke=""none"">`n"
-		$sb += "`t<rect width=""100%"" height=""100%"" fill=""#FFFFFF""/>`n"
+		$sb += "`t<rect width=""$fullSize"" height=""$fullSize"" fill=""#FFFFFF""/>`n"
 		$sb += "`t<path d="""
 
 		for ([int] $y = 0; $y -lt $this.size; $y++)
