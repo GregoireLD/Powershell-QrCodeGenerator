@@ -1136,7 +1136,83 @@ class QrCode {
 	[string] toSvgString() {
 		return $this.toSvgString(4)
 	}
+
+
+ # Returns a string of Braille characteres depicting this QR Code, with the specified number
+	# of border modules. The string always uses Unix newlines (\n), regardless of the platform.
+	# @param border the number of border modules to add, which must be non-negative
+	# @return a string representing this QR Code in Unicode Braille Characters
+	# @throws IllegalArgumentException if the border is negative
+	[String] toBrailleString([int] $borderSize=4)
+	{
+		if($borderSize -lt 0){throw "borderSize must be equal or greater than 0"}
+
+		$output = "`n"
+
+		for ([int] $y = -$borderSize; $y -lt ($this.size + $borderSize); $y=$y+4)
+		{
+			for ([int] $x = -$borderSize; $x -lt ($this.size + $borderSize); $x=$x+2)
+			{
+				$BrailleChar=0x2800 #Empty Braille Char
+
+				# 4 First Dots Loop
+				for([int] $innerX = 0; $innerX -lt 2; $innerX++)
+				{
+					for ([int] $innerY = 0; $innerY -lt 3; $innerY++)
+					{
+						if ((($y+$innerY) -ge 0) -and (($y+$innerY) -lt $this.size) -and (($x+$innerX) -ge 0) -and (($x+$innerX) -lt $this.size))
+						{
+							# Write-Host "Coords xy : $($x+$innerX)-$($y+$innerY) -- $($this.getModule($x+$innerX, $y+$innerY)) -- $([Math]::Pow(2,$innerY+($innerX*3)))"
+							if(-not ($this.getModule($x+$innerX, $y+$innerY)))
+							{
+								# add dot
+								$BrailleChar += [Math]::Pow(2,$innerY+($innerX*3))
+							}
+						} else {
+							# Write-Host "Coords xy : $($x+$innerX)-$($y+$innerY) -- FILLER -- $([Math]::Pow(2,$innerY+($innerX*3)))"
+							if (-not ((($y+$innerY) -ge ($this.size+$borderSize)) -or (($X+$innerX) -ge ($this.size+$borderSize))))
+							{
+								$BrailleChar += [Math]::Pow(2,$innerY+($innerX*3))
+							}
+						}
+					}
+				}
+
+				# 2 Last Dots Loop
+				$innerY = 3
+				for([int] $innerX = 0; $innerX -lt 2; $innerX++)
+				{
+					if ((($y+$innerY) -ge 0) -and (($y+$innerY) -lt $this.size) -and (($x+$innerX) -ge 0) -and (($x+$innerX) -lt $this.size))
+					{
+						# Write-Host "Coords xy : $($x+$innerX)-$($y+$innerY) -- $($this.getModule($x+$innerX, $y+$innerY)) -- $([Math]::Pow(2,6+$innerX))`n"
+						if(-not ($this.getModule($x+$innerX, $y+$innerY)))
+						{
+							# add dot
+							$BrailleChar += [Math]::Pow(2,6+$innerX)
+						}
+					} else {
+						# Write-Host "Coords xy : $($x+$innerX)-$($y+$innerY) -- FILLER -- $([Math]::Pow(2,6+$innerX))"
+						if (-not ((($y+$innerY) -ge ($this.size+$borderSize)) -or (($X+$innerX) -ge ($this.size+$borderSize))))
+						{
+							$BrailleChar += [Math]::Pow(2,6+$innerX)
+						}
+					}
+				}
+
+				$output += [char]([int]$BrailleChar)
+
+			}
+			$output += "`n"
+		}
+		$output += "`n"
+
+		return $output
+	}
 	
+	[string] toBrailleString() {
+		return $this.toBrailleString(4)
+	}
+ 
 	# ---- Private helper methods for constructor: Drawing function modules ----
 	
 	# Reads this object's version field, and draws and marks all function modules.
