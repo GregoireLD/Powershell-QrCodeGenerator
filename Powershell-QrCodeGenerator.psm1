@@ -1085,7 +1085,7 @@ class QrCode {
 			}
 			$output += "`n"
 		}
-		$output += "`n"
+		# $output += "`n"
 
 		return $output
 	}
@@ -1147,7 +1147,7 @@ class QrCode {
 	{
 		if($borderSize -lt 0){throw "borderSize must be equal or greater than 0"}
 
-		$output = "`n"
+		$output = ""
 
 		for ([int] $y = -$borderSize; $y -lt ($this.size + $borderSize); $y=$y+4)
 		{
@@ -1204,7 +1204,7 @@ class QrCode {
 			}
 			$output += "`n"
 		}
-		$output += "`n"
+		# $output += "`n"
 
 		return $output
 	}
@@ -1944,11 +1944,12 @@ function New-QrCode {
 		[switch] $disalowEccUpgrade,
 		[switch] $asString,
 		[switch] $asSvgString,
+  		[switch] $asBrailleString,
 		[switch] $noMask,
 		[int] $stringBorder=4
 	)
 
-	if($asString -and $asSvgString){throw "asString and asSvgString are mutually exclusive"}
+	if((([int]([bool]$asString)) + ([int]([bool]$asSvgString)) + ([int]([bool]$asBrailleString))) -gt 1){throw "asString, asSvgString, asBrailleString and are mutually exclusive"}
 	if($stringBorder -lt 0){throw "stringBorder must be equal or greater than zero"}
 
 	[Ecc] $ecl = New-Object 'Ecc' $minimumEcc
@@ -1979,6 +1980,11 @@ function New-QrCode {
 		return ($tmpQr.toSvgString($stringBorder))
 	}
 
+ 	if($asBrailleString)
+	{
+		return ($tmpQr.toBrailleString($stringBorder))
+	}
+ 	
 	return ($tmpQr)
 }
 
