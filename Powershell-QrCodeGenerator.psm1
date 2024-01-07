@@ -1553,7 +1553,6 @@ class QrCode {
 				$this.applyMask($i)
 				$this.drawFormatBits($i)
 				[int] $penalty = $this.getPenaltyScore()
-				# ToDo_test
 				# Write-Host "mask " + $i + " : " $penalty
 				if ($penalty -lt $minPenalty)
 				{
@@ -1935,9 +1934,80 @@ class QrCode {
 #endregion Classes
 
 function New-QrCode {
+	<#
+	.SYNOPSIS
+		Produce a QRCode
+	
+	.DESCRIPTION
+		This Cmdlet can produce a large variety of QRCodes, Monolithic or segmented,
+		in all supported formats (Numeric, Alphanumeric, Byte, Kanji, ECI).
+		You can generate a QRCode either directly from data, or using QRCode segments
+		generated with the New-QrSegment Cmdlet.
+	
+	.PARAMETER text
+		Text to embed in the QRCode.
+	
+	.PARAMETER segments
+		Array of QRCode segments to embed in the QRCode.
+	
+	.PARAMETER minimumEcc
+		This parameter specify the lowest Error Correction Code Level allowed to use.
+	
+	.PARAMETER forceMask
+		This parameter can force the use of a sub obtimal mask (from 0 to 7),
+		auto-detect mask (-1, default), and no mask at all (-2).
+		The "No Mask" parameter generates an invalid QRCode and must only be used for
+		educational purpose.
+	
+	.PARAMETER disalowEccUpgrade
+		If this switch is present, the QRCode will specificaly be generated with the
+		specified ECC level, even if it would be possible to have a better ECC at the
+		same size.
+	
+	.PARAMETER asString
+		Instead of a QRCode object, the output will be a string suitable for displaying
+		the QRCode directly as a console output. The same result can be obtained with
+		the toString() funtion of a QRCode object.
+	
+	.PARAMETER asSvgString
+		Instead of a QRCode object, the output will be a SVG-formated string wich can
+		be put in a file to make a SVG version of the QRCode. The same result can be
+		obtained with the toSvgString() funtion of a QRCode object.
+	
+	.PARAMETER asBrailleString
+		Instead of a QRCode object, the output will be a Unicode string using Braille
+		characters for displaying the QRCode directly as a console output.
+		Note: The default spacing of most terminal applications can make it unreadable.
+		The same result can be obtained with the toSvgString() funtion of a QRCode object.
+	
+	.PARAMETER noMask
+		This noMask switch parameter generates an invalid QRCode and must only be used for
+		educational purpose.
+		Note: This is equivalent to -forceMask -2
+	
+	.PARAMETER stringBorder
+		This parameter specify the size of the border in modules (the size of a unit square
+		in the QRCode terminology).
+	
+	.INPUTS
+		The Text parameter can get it's value from the pipeline
+	
+	.OUTPUTS
+		Unless specified otherwise, the output is a QRCode object, and if this object is converted
+		into a string, it will be as a Console-Printable QRCode.
+	
+	.EXAMPLE
+		New-QrCode -text "GLD DEMO" -AsString
+	
+	.LINK
+		https://github.com/GregoireLD/Powershell-QrCodeGenerator
+	
+	.NOTES
+		This Cmdlet can make use of New-QrBitBuffer and New-QrSegment Cmdlets.
+    #>
 	[CmdletBinding()]
 	param (
-		[Parameter(ParameterSetName="FromString")][string] $text="Sample",
+		[Parameter(ParameterSetName="FromString",ValueFromPipeline=$true)][string] $text="Sample",
 		[Parameter(ParameterSetName="FromSegments")][QrSegment[]] $segments,
 		[ValidateSet("LOW","MEDIUM","QUARTILE","HIGH")][string] $minimumEcc="LOW",
 		[ValidateRange(-2,7)][int] $forceMask=-1,
