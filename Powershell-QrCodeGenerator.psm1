@@ -950,6 +950,8 @@ class QrCode {
 	#  * &#x2212;1), the resulting object still has a mask value between 0 and 7. */
 	[int] $mask
 	
+	[boolean] $isInverted
+	
 	# // Private grids of modules/pixels, with dimensions of size*size:
 	
 	# // The modules of this QR Code (false = white, true = black).
@@ -1025,6 +1027,11 @@ class QrCode {
         return ((0 -le $x) -and ($x -lt $this.size) -and (0 -le $y) -and ($y -lt $this.size) -and $this.modules[$y][$x])
 	}
 	
+
+	invert()
+    {
+		$this.isInverted = (-not $this.isInverted)
+	}
 	
 	# Returns a raster image depicting this QR Code, with the specified module scale and border modules.
 	# <p>For example, toImage(scale=10, border=4) means to pad the QR Code with 4 white
@@ -1055,6 +1062,15 @@ class QrCode {
 	[string] toString([int] $borderSize) {
 		$output = ""
 
+		$blackChar = " "
+		$whiteChar = [char]0x2588
+
+		if($this.isInverted){
+			$tmpChar = $blackChar
+			$blackChar = $whiteChar
+			$whiteChar = $tmpChar
+		}
+
 		if($borderSize -lt 0){throw "borderSize must be equal or greater than 0"}
 
 		for ([int] $y = -$borderSize; $y -lt ($this.size + $borderSize); $y++)
@@ -1066,21 +1082,21 @@ class QrCode {
 					if($this.getModule($x, $y))
 					{
 						# write space
-						$output += " "
-						$output += " "
+						$output += $blackChar
+						$output += $blackChar
 					}
 					else
 					{
 						# write block
-						$output += [char]0x2588
-						$output += [char]0x2588
+						$output += $whiteChar
+						$output += $whiteChar
 					}
 				}
 				else
 				{
 					# write protective blocks
-					$output += [char]0x2588
-					$output += [char]0x2588
+					$output += $whiteChar
+					$output += $whiteChar
 				}
 			}
 			$output += "`n"
@@ -1103,13 +1119,24 @@ class QrCode {
 	{
 		if($borderSize -lt 0){throw "borderSize must be equal or greater than 0"}
 		
+		$blackChar = "#FFFFFF"
+		$whiteChar = "#000000 "
+
+		if($this.isInverted){
+			$tmpChar = $blackChar
+			$blackChar = $whiteChar
+			$whiteChar = $tmpChar
+		}
+
 		[long] $brd = $borderSize
 		[long] $fullSize = $this.size + ($brd * 2)
 		[string] $sb = ""
 		$sb += "<?xml version=""1.0"" encoding=""UTF-8""?>`n"
 		$sb += "<!DOCTYPE svg PUBLIC ""-//W3C//DTD SVG 1.1//EN"" ""http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"">`n"
 		$sb += "<svg xmlns=""http://www.w3.org/2000/svg"" version=""1.1"" viewBox=""0 0 $fullSize $fullSize"" stroke=""none"">`n"
-		$sb += "`t<rect width=""$fullSize"" height=""$fullSize"" fill=""#FFFFFF""/>`n"
+
+		$sb += "`t<rect width=""$fullSize"" height=""$fullSize"" fill=""$blackChar""/>`n"
+		
 		$sb += "`t<path d="""
 
 		for ([int] $y = 0; $y -lt $this.size; $y++)
@@ -1127,7 +1154,8 @@ class QrCode {
 			}
 		}
 
-		$sb += """ fill=""#000000""/>`n"
+		$sb += """ fill=""$whiteChar""/>`n"
+
 		$sb += "</svg>`n"
 
 		return $sb
@@ -1163,16 +1191,26 @@ class QrCode {
 						if ((($y+$innerY) -ge 0) -and (($y+$innerY) -lt $this.size) -and (($x+$innerX) -ge 0) -and (($x+$innerX) -lt $this.size))
 						{
 							# Write-Host "Coords xy : $($x+$innerX)-$($y+$innerY) -- $($this.getModule($x+$innerX, $y+$innerY)) -- $([Math]::Pow(2,$innerY+($innerX*3)))"
-							if(-not ($this.getModule($x+$innerX, $y+$innerY)))
-							{
-								# add dot
-								$BrailleChar += [Math]::Pow(2,$innerY+($innerX*3))
+							if($this.isInverted){
+								if(($this.getModule($x+$innerX, $y+$innerY)))
+								{
+									# add dot
+									$BrailleChar += [Math]::Pow(2,$innerY+($innerX*3))
+								}
+							} else {
+								if(-not ($this.getModule($x+$innerX, $y+$innerY)))
+								{
+									# add dot
+									$BrailleChar += [Math]::Pow(2,$innerY+($innerX*3))
+								}
 							}
 						} else {
 							# Write-Host "Coords xy : $($x+$innerX)-$($y+$innerY) -- FILLER -- $([Math]::Pow(2,$innerY+($innerX*3)))"
 							if (-not ((($y+$innerY) -ge ($this.size+$borderSize)) -or (($X+$innerX) -ge ($this.size+$borderSize))))
 							{
-								$BrailleChar += [Math]::Pow(2,$innerY+($innerX*3))
+								if(-not $this.isInverted){
+									$BrailleChar += [Math]::Pow(2,$innerY+($innerX*3))
+								}
 							}
 						}
 					}
@@ -1185,16 +1223,26 @@ class QrCode {
 					if ((($y+$innerY) -ge 0) -and (($y+$innerY) -lt $this.size) -and (($x+$innerX) -ge 0) -and (($x+$innerX) -lt $this.size))
 					{
 						# Write-Host "Coords xy : $($x+$innerX)-$($y+$innerY) -- $($this.getModule($x+$innerX, $y+$innerY)) -- $([Math]::Pow(2,6+$innerX))`n"
-						if(-not ($this.getModule($x+$innerX, $y+$innerY)))
-						{
-							# add dot
-							$BrailleChar += [Math]::Pow(2,6+$innerX)
+						if($this.isInverted){
+							if(($this.getModule($x+$innerX, $y+$innerY)))
+							{
+								# add dot
+								$BrailleChar += [Math]::Pow(2,6+$innerX)
+							}
+						} else {
+							if(-not ($this.getModule($x+$innerX, $y+$innerY)))
+							{
+								# add dot
+								$BrailleChar += [Math]::Pow(2,6+$innerX)
+							}
 						}
 					} else {
 						# Write-Host "Coords xy : $($x+$innerX)-$($y+$innerY) -- FILLER -- $([Math]::Pow(2,6+$innerX))"
 						if (-not ((($y+$innerY) -ge ($this.size+$borderSize)) -or (($X+$innerX) -ge ($this.size+$borderSize))))
 						{
-							$BrailleChar += [Math]::Pow(2,6+$innerX)
+							if(-not $this.isInverted){
+								$BrailleChar += [Math]::Pow(2,6+$innerX)
+							}
 						}
 					}
 				}
@@ -1960,6 +2008,11 @@ function New-QrCode {
 		The "No Mask" parameter generates an invalid QRCode and must only be used for
 		educational purpose.
 	
+	.PARAMETER invert
+		If this switch is present, the QRCode colors will be inverted.
+		The same result can be obtained afterwards by using the invert() funtion of
+		a QRCode object.
+
 	.PARAMETER disalowEccUpgrade
 		If this switch is present, the QRCode will specificaly be generated with the
 		specified ECC level, even if it would be possible to have a better ECC at the
@@ -2012,6 +2065,7 @@ function New-QrCode {
 		[Parameter(ParameterSetName="FromSegments")][QrSegment[]] $segments,
 		[ValidateSet("LOW","MEDIUM","QUARTILE","HIGH")][string] $minimumEcc="LOW",
 		[ValidateRange(-2,7)][int] $forceMask=-1,
+		[switch] $invert,
 		[switch] $disalowEccUpgrade,
 		[switch] $asString,
 		[switch] $asSvgString,
@@ -2034,11 +2088,14 @@ function New-QrCode {
 	if($segments)
 	{
 		$tmpQr = [QrCode]::encodeSegments($segments, $ecl,$forceMask,-not $disalowEccUpgrade)
-
 	}
 	else
 	{
 		$tmpQr = [QrCode]::encodeText($text, $ecl,$forceMask,-not $disalowEccUpgrade)
+	}
+
+	if($invert){
+		$tmpQr.invert()
 	}
 
 	if($asString)
