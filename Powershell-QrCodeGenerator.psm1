@@ -1952,6 +1952,7 @@ function New-QrCode {
 	
 	.PARAMETER minimumEcc
 		This parameter specify the lowest Error Correction Code Level allowed to use.
+		Valid values are : "LOW","MEDIUM","QUARTILE", and "HIGH"
 	
 	.PARAMETER forceMask
 		This parameter can force the use of a sub obtimal mask (from 0 to 7),
