@@ -1,5 +1,6 @@
 # Powershell-QrCodeGenerator
-Cross-platform QrCode Generator, mainly inspired by Nayuki's "QR-Code-generator", fully reimplemented in Powershell. No Wrapper.
+Cross-platform QrCode Generator, with a CLI display, and SVG export functionality.
+this is mainly inspired by Nayuki's "QR-Code-generator", fully reimplemented in Powershell. No Wrapper.
 Fully compatible with Windows, macOS, and Linux systems.
 
 ## Samples :
