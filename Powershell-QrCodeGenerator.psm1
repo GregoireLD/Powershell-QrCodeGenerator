@@ -713,8 +713,8 @@ class QrCode {
     # The maximum version number (40) supported in the QR Code Model 2 standard.
     static [int] $MAX_VERSION = 40
 
-	# The Default Border Size.
-    static [int] $DEFAULT_BORDER_SIZE = 2
+	# The Default Quiet Zone Size.
+    static [int] $DEFAULT_QUIET_ZONE = 2
 
     # For use in getPenaltyScore(), when evaluating which mask is best.
     static $PENALTY_N1 =  3
@@ -943,7 +943,7 @@ class QrCode {
     [int] $size
 
 	# Stores the size of the border
-	[int] $borderSize
+	[int] $quietZone
 
     # /** The error correction level used in this QR Code, which is not {@code null}. */
 	[Ecc] $errorCorrectionLevel
@@ -995,7 +995,7 @@ class QrCode {
 		$this.version = $ver
         $this.size = ($ver * 4) + 17
         $this.errorCorrectionLevel = New-Object 'Ecc' $ecl;
-		$this.borderSize=[QrCode]::DEFAULT_BORDER_SIZE
+		$this.quietZone=[QrCode]::DEFAULT_QUIET_ZONE
         if (-not $dataCodewords)
         {
             throw "dataCodewords (byte[]) in QrCode is null"
@@ -1038,15 +1038,29 @@ class QrCode {
 		$this.isInverted = (-not $this.isInverted)
 	}
 	
-	setBorderSize([int] $borderSize)
+	setQuietZone([int] $quietZone)
     {
-		if($borderSize -lt 0){throw "borderSize must be equal or greater than 0"}
-		$this.borderSize = $borderSize
+		if($quietZone -lt 0){throw "quietZone (borderSize) must be equal or greater than 0"}
+		$this.quietZone = $quietZone
 	}
 
+	setQuietZone()
+    {
+		$this.quietZone = [QrCode]::DEFAULT_QUIET_ZONE
+	}
+
+	# Deprecated function
+	setBorderSize([int] $quietZone)
+    {
+		Write-Warning -Message "setBorderSize is deprecated, use setQuietZone instead"
+		$this.setQuietZone($quietZone)
+	}
+
+	# Deprecated function
 	setBorderSize()
     {
-		$this.borderSize = [QrCode]::DEFAULT_BORDER_SIZE
+		Write-Warning -Message "setBorderSize is deprecated, use setQuietZone instead"
+		$this.setQuietZone()
 	}
 
 	# Returns a raster image depicting this QR Code, with the specified module scale and border modules.
@@ -1075,7 +1089,7 @@ class QrCode {
 	# 	return result;
 	# }
 
-	[string] toString([int] $borderSize) {
+	[string] toString([int] $quietZone) {
 		$output = ""
 
 		$blackChar = " "
@@ -1087,11 +1101,11 @@ class QrCode {
 			$whiteChar = $tmpChar
 		}
 
-		if($borderSize -lt 0){throw "borderSize must be equal or greater than 0"}
+		if($quietZone -lt 0){throw "quietZone (borderSize) must be equal or greater than 0"}
 
-		for ([int] $y = -$borderSize; $y -lt ($this.size + $borderSize); $y++)
+		for ([int] $y = -$quietZone; $y -lt ($this.size + $quietZone); $y++)
 		{
-			for ([int] $x = -$borderSize; $x -lt ($this.size + $borderSize); $x++)
+			for ([int] $x = -$quietZone; $x -lt ($this.size + $quietZone); $x++)
 			{
 				if (($y -ge 0) -and ($y -lt $this.size) -and ($x -ge 0) -and ($x -lt $this.size))
 				{
@@ -1123,17 +1137,17 @@ class QrCode {
 	}
 	
 	[string] toString() {
-		return $this.toString($this.borderSize)
+		return $this.toString($this.quietZone)
 	}
 	
 	# Returns a string of SVG code for an image depicting this QR Code, with the specified number
 	# of border modules. The string always uses Unix newlines (\n), regardless of the platform.
-	# @param border the number of border modules to add, which must be non-negative
+	# @param quietZone the number of border modules to add, which must be non-negative
 	# @return a string representing this QR Code as an SVG XML document
-	# @throws IllegalArgumentException if the border is negative
-	[String] toSvgString([int] $borderSize)
+	# @throws IllegalArgumentException if the quiet zone size is negative
+	[String] toSvgString([int] $quietZone)
 	{
-		if($borderSize -lt 0){throw "borderSize must be equal or greater than 0"}
+		if($quietZone -lt 0){throw "quietZone (borderSize) must be equal or greater than 0"}
 		
 		$blackChar = "#FFFFFF"
 		$whiteChar = "#000000 "
@@ -1144,7 +1158,7 @@ class QrCode {
 			$whiteChar = $tmpChar
 		}
 
-		[long] $brd = $borderSize
+		[long] $brd = $quietZone
 		[long] $fullSize = $this.size + ($brd * 2)
 		[string] $sb = ""
 		$sb += "<?xml version=""1.0"" encoding=""UTF-8""?>`n"
@@ -1178,7 +1192,7 @@ class QrCode {
 	}
 	
 	[string] toSvgString() {
-		return $this.toSvgString($this.borderSize)
+		return $this.toSvgString($this.quietZone)
 	}
 
 
@@ -1186,16 +1200,16 @@ class QrCode {
 	# of border modules. The string always uses Unix newlines (\n), regardless of the platform.
 	# @param border the number of border modules to add, which must be non-negative
 	# @return a string representing this QR Code in Unicode Braille Characters
-	# @throws IllegalArgumentException if the border is negative
-	[String] toBrailleString([int] $borderSize)
+	# @throws IllegalArgumentException if the quiet zone size is negative
+	[String] toBrailleString([int] $quietZone)
 	{
-		if($borderSize -lt 0){throw "borderSize must be equal or greater than 0"}
+		if($quietZone -lt 0){throw "quietZone (borderSize) must be equal or greater than 0"}
 
 		$output = ""
 
-		for ([int] $y = -$borderSize; $y -lt ($this.size + $borderSize); $y=$y+4)
+		for ([int] $y = -$quietZone; $y -lt ($this.size + $quietZone); $y=$y+4)
 		{
-			for ([int] $x = -$borderSize; $x -lt ($this.size + $borderSize); $x=$x+2)
+			for ([int] $x = -$quietZone; $x -lt ($this.size + $quietZone); $x=$x+2)
 			{
 				$BrailleChar=0x2800 #Empty Braille Char
 
@@ -1222,7 +1236,7 @@ class QrCode {
 							}
 						} else {
 							# Write-Host "Coords xy : $($x+$innerX)-$($y+$innerY) -- FILLER -- $([Math]::Pow(2,$innerY+($innerX*3)))"
-							if (-not ((($y+$innerY) -ge ($this.size+$borderSize)) -or (($X+$innerX) -ge ($this.size+$borderSize))))
+							if (-not ((($y+$innerY) -ge ($this.size+$quietZone)) -or (($X+$innerX) -ge ($this.size+$quietZone))))
 							{
 								if(-not $this.isInverted){
 									$BrailleChar += [Math]::Pow(2,$innerY+($innerX*3))
@@ -1254,7 +1268,7 @@ class QrCode {
 						}
 					} else {
 						# Write-Host "Coords xy : $($x+$innerX)-$($y+$innerY) -- FILLER -- $([Math]::Pow(2,6+$innerX))"
-						if (-not ((($y+$innerY) -ge ($this.size+$borderSize)) -or (($X+$innerX) -ge ($this.size+$borderSize))))
+						if (-not ((($y+$innerY) -ge ($this.size+$quietZone)) -or (($X+$innerX) -ge ($this.size+$quietZone))))
 						{
 							if(-not $this.isInverted){
 								$BrailleChar += [Math]::Pow(2,6+$innerX)
@@ -1274,7 +1288,7 @@ class QrCode {
 	}
 	
 	[string] toBrailleString() {
-		return $this.toBrailleString($this.borderSize)
+		return $this.toBrailleString($this.quietZone)
 	}
  
 	# ---- Private helper methods for constructor: Drawing function modules ----
@@ -2019,10 +2033,14 @@ function New-QrCode {
 		The "No Mask" parameter generates an invalid QRCode and must only be used for
 		educational purpose.
 	
+	.PARAMETER quietZone
+		This parameter specify the size of the Quiet Zone (border) in modules (wich
+		represent the size of a unit square in the QRCode terminology).
+		Default size is 2, as requested by the QRCode specification.
+		This value is specified in the static variable [QrCode]::DEFAULT_QUIET_ZONE.
+	
 	.PARAMETER borderSize
-		This parameter specify the size of the border in modules (the size of a unit square
-		in the QRCode terminology). Default size is 2, as requested by the QRCode specification.
-		This value is specified in the static variable [QrCode]::DEFAULT_BORDER_SIZE.
+		This parameter is an alias for the quietZone parameter.
 	
 	.PARAMETER invert
 		If this switch is present, the QRCode colors will be inverted.
@@ -2077,7 +2095,7 @@ function New-QrCode {
 		[Parameter(ParameterSetName="FromSegments")][QrSegment[]] $segments,
 		[ValidateSet("LOW","MEDIUM","QUARTILE","HIGH")][string] $minimumEcc="LOW",
 		[ValidateRange(-2,7)][int] $forceMask=-1,
-		[int] $borderSize=[QrCode]::DEFAULT_BORDER_SIZE,
+		[Alias("borderSize")][int] $quietZone=[QrCode]::DEFAULT_QUIET_ZONE_SIZE,
 		[switch] $invert,
 		[switch] $disalowEccUpgrade,
 		[switch] $asString,
@@ -2087,7 +2105,7 @@ function New-QrCode {
 	)
 
 	if((([int]([bool]$asString)) + ([int]([bool]$asSvgString)) + ([int]([bool]$asBrailleString))) -gt 1){throw "asString, asSvgString, asBrailleString and are mutually exclusive"}
-	if($borderSize -lt 0){throw "borderSize must be equal or greater than zero"}
+	if($quietZone -lt 0){throw "quietZone (borderSize) must be equal or greater than zero"}
 
 	[Ecc] $ecl = New-Object 'Ecc' $minimumEcc
 	
@@ -2110,23 +2128,23 @@ function New-QrCode {
 		$tmpQr.invert()
 	}
 
-	if($borderSize){
-		$tmpQr.setBorderSize($borderSize)
+	if($quietZone){
+		$tmpQr.setQuietZone($quietZone)
 	}
 
 	if($asString)
 	{
-		return ($tmpQr.toString($borderSize))
+		return ($tmpQr.toString($quietZone))
 	}
 	
 	if($asSvgString)
 	{
-		return ($tmpQr.toSvgString($borderSize))
+		return ($tmpQr.toSvgString($quietZone))
 	}
 
  	if($asBrailleString)
 	{
-		return ($tmpQr.toBrailleString($borderSize))
+		return ($tmpQr.toBrailleString($quietZone))
 	}
  	
 	return ($tmpQr)
