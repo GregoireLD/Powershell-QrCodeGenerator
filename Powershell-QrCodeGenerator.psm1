@@ -181,74 +181,12 @@ class QrMode{
 	# in a QR Code at the given version number. The result is in the range [0, 16].
 	[int] numCharCountBits([int] $ver)
 	{
-		if (([QrCodeGlobal]::MIN_VERSION -gt $ver) -or ($ver -gt [QrCodeGlobal]::MAX_VERSION))
+		if (([QrCode]::MIN_VERSION -gt $ver) -or ($ver -gt [QrCode]::MAX_VERSION))
         {
-			throw "Version is not a valid value. It must range from "+[QrCodeGlobal]::MIN_VERSION+" to "+[QrCodeGlobal]::MAX_VERSION
+			throw "Version is not a valid value. It must range from "+[QrCode]::MIN_VERSION+" to "+[QrCode]::MAX_VERSION
         }
 		return $this.numBitsCharCount[[Math]::truncate(($ver + 7) / 17)]
 	}
-}
-
-class QrCodeGlobal {
-
-    # The minimum version number  (1) supported in the QR Code Model 2 standard.
-    static [int] $MIN_VERSION = 1
-
-    # The maximum version number (40) supported in the QR Code Model 2 standard.
-    static [int] $MAX_VERSION = 40
-
-	# The Default Border Size.
-    static [int] $DEFAULT_BORDER_SIZE = 2
-
-    # For use in getPenaltyScore(), when evaluating which mask is best.
-    static $PENALTY_N1 =  3
-    static $PENALTY_N2 =  3
-    static $PENALTY_N3 = 40
-    static $PENALTY_N4 = 10
-
-
-    static [byte[][]] $ECC_CODEWORDS_PER_BLOCK = @(
-    # Version: (note that index 0 is for padding, and is set to an illegal value)
-    #    0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40     Error correction level
-    @(0xFF,  7, 10, 15, 20, 26, 18, 20, 24, 30, 18, 20, 24, 26, 30, 22, 24, 28, 30, 28, 28, 28, 28, 30, 30, 26, 28, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30), # Low
-    @(0xFF, 10, 16, 26, 18, 24, 16, 18, 22, 22, 26, 30, 22, 22, 24, 24, 28, 28, 26, 26, 26, 26, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28), # Medium
-    @(0xFF, 13, 22, 18, 26, 18, 24, 18, 22, 20, 24, 28, 26, 24, 20, 30, 24, 28, 28, 26, 30, 28, 30, 30, 30, 30, 28, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30), # Quartile
-    @(0xFF, 17, 28, 22, 16, 22, 28, 26, 26, 24, 28, 24, 28, 22, 24, 24, 30, 28, 28, 26, 28, 30, 24, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30)  # High
-    )
-
-
-    static [byte[][]]  $NUM_ERROR_CORRECTION_BLOCKS = @(
-    # Version: (note that index 0 is for padding, and is set to an illegal value)
-    #    0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40      Error correction level
-    @(0xFF, 1, 1, 1, 1, 1, 2, 2, 2, 2, 4,  4,  4,  4,  4,  6,  6,  6,  6,  7,  8,  8,  9,  9, 10, 12, 12, 12, 13, 14, 15, 16, 17, 18, 19, 19, 20, 21, 22, 24, 25),  # Low
-    @(0xFF, 1, 1, 1, 2, 2, 4, 4, 4, 5, 5,  5,  8,  9,  9, 10, 10, 11, 13, 14, 16, 17, 17, 18, 20, 21, 23, 25, 26, 28, 29, 31, 33, 35, 37, 38, 40, 43, 45, 47, 49),  # Medium
-    @(0xFF, 1, 1, 2, 2, 4, 4, 6, 6, 8, 8,  8, 10, 12, 16, 12, 17, 16, 18, 21, 20, 23, 23, 25, 27, 29, 34, 34, 35, 38, 40, 43, 45, 48, 51, 53, 56, 59, 62, 65, 68),  # Quartile
-    @(0xFF, 1, 1, 2, 4, 4, 4, 5, 6, 8, 8, 11, 11, 16, 16, 18, 16, 19, 21, 25, 25, 25, 34, 30, 32, 35, 37, 40, 42, 45, 48, 51, 54, 57, 60, 63, 66, 70, 74, 77, 81)   # High
-	)
-
-		# ---- Constants ----
-	
-
-	static [string] $BINARY_REGEX = "^[01]+$"
-
-	
-	# Describes precisely all strings that are encodable in numeric mode. To test whether a
-	# string {@code s} is encodable: {@code boolean ok = NUMERIC_REGEX.matcher(s).matches();}.
-	# A string is encodable iff each character is in the range 0 to 9.
-	# @see #makeNumeric(String) */
-	static [string] $NUMERIC_REGEX = "^\d+$"
-	
-	# Describes precisely all strings that are encodable in alphanumeric mode. To test whether a
-	# string {@code s} is encodable: {@code boolean ok = ALPHANUMERIC_REGEX.matcher(s).matches();}.
-	# A string is encodable iff each character is in the following set: 0 to 9, A to Z
-	# (uppercase only), space, dollar, percent, asterisk, plus, hyphen, period, slash, colon.
-	# @see #makeAlphanumeric(String) */
-	static [string] $ALPHANUMERIC_REGEX = "^[A-Z0-9 $%*+./:-]+$"
-
-	# The set of all legal characters in alphanumeric mode, where
-	# each character value maps to the index in the string.
-	static [string] $ALPHANUMERIC_CHARSET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:"
-
 }
 
 class QrBitBuffer {
@@ -279,7 +217,7 @@ class QrBitBuffer {
 	
 	QrBitBuffer([string] $binaryString)
 	{
-		if (-not($binaryString -match [QrCodeGlobal]::BINARY_REGEX))
+		if (-not($binaryString -match [QrCode]::BINARY_REGEX))
 		{
 			throw "binaryString to use is not a binary string"
 		}
@@ -433,7 +371,7 @@ class QrBitBuffer {
         {
             throw "binStr to append is null"
         }
-		if (-not($binStr -match [QrCodeGlobal]::BINARY_REGEX))
+		if (-not($binStr -match [QrCode]::BINARY_REGEX))
 		{
 			throw "binStr to append is not a binary string"
 		}
@@ -488,7 +426,7 @@ class QrSegment {
         {
             throw "digits (String) to forge segment is null"
 		}
-		if (-not ($digits -match [QrCodeGlobal]::NUMERIC_REGEX)){
+		if (-not ($digits -match [QrCode]::NUMERIC_REGEX)){
             throw "digits to forge segment from is not a digital string"
 		}
 
@@ -517,7 +455,7 @@ class QrSegment {
             throw "text (String) to forge segment is null"
 		}
 		
-		if ( -not ( $text -cmatch [QrCodeGlobal]::ALPHANUMERIC_REGEX))
+		if ( -not ( $text -cmatch [QrCode]::ALPHANUMERIC_REGEX))
 		{
 			throw "text (String) to forge segment from contains illegal characters"
 		}
@@ -526,14 +464,14 @@ class QrSegment {
 		[int] $i = 0 # needed here for global persistance
 		for ($i = 0; $i -le ($text.length - 2); $i += 2) # Process groups of 2
 		{
-			[int] $temp = [QrCodeGlobal]::ALPHANUMERIC_CHARSET.IndexOf($text[$i]) * 45
-			$temp += [QrCodeGlobal]::ALPHANUMERIC_CHARSET.IndexOf($text[$i+1])
+			[int] $temp = [QrCode]::ALPHANUMERIC_CHARSET.IndexOf($text[$i]) * 45
+			$temp += [QrCode]::ALPHANUMERIC_CHARSET.IndexOf($text[$i+1])
 			$bb.appendBits($temp, 11)
 		}
 		
 		if ($i -lt $text.length) # 1 character remaining
 		{
-			$bb.appendBits([QrCodeGlobal]::ALPHANUMERIC_CHARSET.IndexOf($text[$i]), 6)
+			$bb.appendBits([QrCode]::ALPHANUMERIC_CHARSET.IndexOf($text[$i]), 6)
 		}
 		
 		return (New-Object 'QrSegment' ([QrMode]::ALPHANUMERIC()), $text.length , $bb)
@@ -558,11 +496,11 @@ class QrSegment {
 		{
 			#Leave result empty
 		}
-		elseif ($text -match [QrCodeGlobal]::NUMERIC_REGEX )
+		elseif ($text -match [QrCode]::NUMERIC_REGEX )
 		{
 			$result += ([QrSegment]::makeNumeric($text))
 		}
-		elseif ($text -cmatch [QrCodeGlobal]::ALPHANUMERIC_REGEX )
+		elseif ($text -cmatch [QrCode]::ALPHANUMERIC_REGEX )
 		{
 			$result += ([QrSegment]::makeAlphanumeric($text))
 		}
@@ -767,6 +705,66 @@ class QrCode {
         return [QrCode]::encodeSegments($seg, $ecl,$mask,$boostEcl)
 	}
 	
+	# ---- Static Properties used globaly ----
+
+	# The minimum version number  (1) supported in the QR Code Model 2 standard.
+    static [int] $MIN_VERSION = 1
+
+    # The maximum version number (40) supported in the QR Code Model 2 standard.
+    static [int] $MAX_VERSION = 40
+
+	# The Default Border Size.
+    static [int] $DEFAULT_BORDER_SIZE = 2
+
+    # For use in getPenaltyScore(), when evaluating which mask is best.
+    static $PENALTY_N1 =  3
+    static $PENALTY_N2 =  3
+    static $PENALTY_N3 = 40
+    static $PENALTY_N4 = 10
+
+
+    static [byte[][]] $ECC_CODEWORDS_PER_BLOCK = @(
+    # Version: (note that index 0 is for padding, and is set to an illegal value)
+    #    0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40     Error correction level
+    @(0xFF,  7, 10, 15, 20, 26, 18, 20, 24, 30, 18, 20, 24, 26, 30, 22, 24, 28, 30, 28, 28, 28, 28, 30, 30, 26, 28, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30), # Low
+    @(0xFF, 10, 16, 26, 18, 24, 16, 18, 22, 22, 26, 30, 22, 22, 24, 24, 28, 28, 26, 26, 26, 26, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28), # Medium
+    @(0xFF, 13, 22, 18, 26, 18, 24, 18, 22, 20, 24, 28, 26, 24, 20, 30, 24, 28, 28, 26, 30, 28, 30, 30, 30, 30, 28, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30), # Quartile
+    @(0xFF, 17, 28, 22, 16, 22, 28, 26, 26, 24, 28, 24, 28, 22, 24, 24, 30, 28, 28, 26, 28, 30, 24, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30)  # High
+    )
+
+
+    static [byte[][]]  $NUM_ERROR_CORRECTION_BLOCKS = @(
+    # Version: (note that index 0 is for padding, and is set to an illegal value)
+    #    0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40      Error correction level
+    @(0xFF, 1, 1, 1, 1, 1, 2, 2, 2, 2, 4,  4,  4,  4,  4,  6,  6,  6,  6,  7,  8,  8,  9,  9, 10, 12, 12, 12, 13, 14, 15, 16, 17, 18, 19, 19, 20, 21, 22, 24, 25),  # Low
+    @(0xFF, 1, 1, 1, 2, 2, 4, 4, 4, 5, 5,  5,  8,  9,  9, 10, 10, 11, 13, 14, 16, 17, 17, 18, 20, 21, 23, 25, 26, 28, 29, 31, 33, 35, 37, 38, 40, 43, 45, 47, 49),  # Medium
+    @(0xFF, 1, 1, 2, 2, 4, 4, 6, 6, 8, 8,  8, 10, 12, 16, 12, 17, 16, 18, 21, 20, 23, 23, 25, 27, 29, 34, 34, 35, 38, 40, 43, 45, 48, 51, 53, 56, 59, 62, 65, 68),  # Quartile
+    @(0xFF, 1, 1, 2, 4, 4, 4, 5, 6, 8, 8, 11, 11, 16, 16, 18, 16, 19, 21, 25, 25, 25, 34, 30, 32, 35, 37, 40, 42, 45, 48, 51, 54, 57, 60, 63, 66, 70, 74, 77, 81)   # High
+	)
+
+		# ---- Constants ----
+	
+
+	static [string] $BINARY_REGEX = "^[01]+$"
+
+	
+	# Describes precisely all strings that are encodable in numeric mode. To test whether a
+	# string {@code s} is encodable: {@code boolean ok = NUMERIC_REGEX.matcher(s).matches();}.
+	# A string is encodable iff each character is in the range 0 to 9.
+	# @see #makeNumeric(String) */
+	static [string] $NUMERIC_REGEX = "^\d+$"
+	
+	# Describes precisely all strings that are encodable in alphanumeric mode. To test whether a
+	# string {@code s} is encodable: {@code boolean ok = ALPHANUMERIC_REGEX.matcher(s).matches();}.
+	# A string is encodable iff each character is in the following set: 0 to 9, A to Z
+	# (uppercase only), space, dollar, percent, asterisk, plus, hyphen, period, slash, colon.
+	# @see #makeAlphanumeric(String) */
+	static [string] $ALPHANUMERIC_REGEX = "^[A-Z0-9 $%*+./:-]+$"
+
+	# The set of all legal characters in alphanumeric mode, where
+	# each character value maps to the index in the string.
+	static [string] $ALPHANUMERIC_CHARSET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:"
+
 	
 	# ---- Static factory functions (mid level) ----
 	
@@ -784,7 +782,7 @@ class QrCode {
 	# @throws DataTooLongException if the segments fail to fit in the
 	# largest version QR Code at the ECL, which means they are too long
 	static [QrCode] encodeSegments([QrSegment[]] $segs, [Ecc] $ecl,[int] $mask=-1, [boolean] $boostEcl=$true) {
-        return [QrCode]::encodeSegments($segs, $ecl, [QrCodeGlobal]::MIN_VERSION, [QrCodeGlobal]::MAX_VERSION, $mask, $boostEcl)
+        return [QrCode]::encodeSegments($segs, $ecl, [QrCode]::MIN_VERSION, [QrCode]::MAX_VERSION, $mask, $boostEcl)
 	}
 	
 	
@@ -820,7 +818,7 @@ class QrCode {
             throw "ecl (Ecc) in encodeSegments is null"
         }
 
-        if ( -not ((([QrCodeGlobal]::MIN_VERSION -le $minVersion) -and ($minVersion -le $maxVersion) -and ($maxVersion -le [QrCodeGlobal]::MAX_VERSION)) -or ($mask -lt -1) -or ($mask -gt 7)))
+        if ( -not ((([QrCode]::MIN_VERSION -le $minVersion) -and ($minVersion -le $maxVersion) -and ($maxVersion -le [QrCode]::MAX_VERSION)) -or ($mask -lt -1) -or ($mask -gt 7)))
         {
             throw "invalid version or mask in encodeSegments"
         }
@@ -944,6 +942,9 @@ class QrCode {
 	# 21 and 177 (inclusive). This is equal to version &#xD7; 4 + 17.
     [int] $size
 
+	# Stores the size of the border
+	[int] $borderSize
+
     # /** The error correction level used in this QR Code, which is not {@code null}. */
 	[Ecc] $errorCorrectionLevel
 	
@@ -952,6 +953,7 @@ class QrCode {
 	#  * &#x2212;1), the resulting object still has a mask value between 0 and 7. */
 	[int] $mask
 	
+	# Stores if the QRCode must be displayed with inverted colors
 	[boolean] $isInverted
 	
 	# // Private grids of modules/pixels, with dimensions of size*size:
@@ -980,9 +982,9 @@ class QrCode {
 	# or if the data is the wrong length for the specified version and error correction level
 	QrCode([int] $ver, [Ecc] $ecl, [byte[]] $dataCodewords, [int] $msk) {
 		# Check arguments and initialize fields
-        if (($ver -lt [QrCodeGlobal]::MIN_VERSION) -or ($ver -gt [QrCodeGlobal]::MAX_VERSION))
+        if (($ver -lt [QrCode]::MIN_VERSION) -or ($ver -gt [QrCode]::MAX_VERSION))
         {
-			throw "version is out of range. Must range from "+[QrCodeGlobal]::MIN_VERSION+" to "+[QrCodeGlobal]::MAX_VERSION
+			throw "version is out of range. Must range from "+[QrCode]::MIN_VERSION+" to "+[QrCode]::MAX_VERSION
         }
 		
         if (($msk -lt -2) -or ($msk -gt 7))
@@ -993,6 +995,7 @@ class QrCode {
 		$this.version = $ver
         $this.size = ($ver * 4) + 17
         $this.errorCorrectionLevel = New-Object 'Ecc' $ecl;
+		$this.borderSize=[QrCode]::DEFAULT_BORDER_SIZE
         if (-not $dataCodewords)
         {
             throw "dataCodewords (byte[]) in QrCode is null"
@@ -1035,6 +1038,17 @@ class QrCode {
 		$this.isInverted = (-not $this.isInverted)
 	}
 	
+	setBorderSize([int] $borderSize)
+    {
+		if($borderSize -lt 0){throw "borderSize must be equal or greater than 0"}
+		$this.borderSize = $borderSize
+	}
+
+	setBorderSize()
+    {
+		$this.borderSize = [QrCode]::DEFAULT_BORDER_SIZE
+	}
+
 	# Returns a raster image depicting this QR Code, with the specified module scale and border modules.
 	# <p>For example, toImage(scale=10, border=4) means to pad the QR Code with 4 white
 	# border modules on all four sides, and use 10&#xD7;10 pixels to represent each module.
@@ -1061,7 +1075,7 @@ class QrCode {
 	# 	return result;
 	# }
 
-	[string] toString([int] $borderSize=[QrCodeGlobal]::DEFAULT_BORDER_SIZE) {
+	[string] toString([int] $borderSize) {
 		$output = ""
 
 		$blackChar = " "
@@ -1109,7 +1123,7 @@ class QrCode {
 	}
 	
 	[string] toString() {
-		return $this.toString([QrCodeGlobal]::DEFAULT_BORDER_SIZE)
+		return $this.toString($this.borderSize)
 	}
 	
 	# Returns a string of SVG code for an image depicting this QR Code, with the specified number
@@ -1117,7 +1131,7 @@ class QrCode {
 	# @param border the number of border modules to add, which must be non-negative
 	# @return a string representing this QR Code as an SVG XML document
 	# @throws IllegalArgumentException if the border is negative
-	[String] toSvgString([int] $borderSize=[QrCodeGlobal]::DEFAULT_BORDER_SIZE)
+	[String] toSvgString([int] $borderSize)
 	{
 		if($borderSize -lt 0){throw "borderSize must be equal or greater than 0"}
 		
@@ -1164,7 +1178,7 @@ class QrCode {
 	}
 	
 	[string] toSvgString() {
-		return $this.toSvgString([QrCodeGlobal]::DEFAULT_BORDER_SIZE)
+		return $this.toSvgString($this.borderSize)
 	}
 
 
@@ -1173,7 +1187,7 @@ class QrCode {
 	# @param border the number of border modules to add, which must be non-negative
 	# @return a string representing this QR Code in Unicode Braille Characters
 	# @throws IllegalArgumentException if the border is negative
-	[String] toBrailleString([int] $borderSize=[QrCodeGlobal]::DEFAULT_BORDER_SIZE)
+	[String] toBrailleString([int] $borderSize)
 	{
 		if($borderSize -lt 0){throw "borderSize must be equal or greater than 0"}
 
@@ -1260,7 +1274,7 @@ class QrCode {
 	}
 	
 	[string] toBrailleString() {
-		return $this.toBrailleString([QrCodeGlobal]::DEFAULT_BORDER_SIZE)
+		return $this.toBrailleString($this.borderSize)
 	}
  
 	# ---- Private helper methods for constructor: Drawing function modules ----
@@ -1440,8 +1454,8 @@ class QrCode {
 		}
 		
 		# Calculate parameter numbers
-        [int] $numBlocks = [QrCodeGlobal]::NUM_ERROR_CORRECTION_BLOCKS[$this.errorCorrectionLevel.getEccOrdinal()][$this.version]
-        [int] $blockEccLen = [QrCodeGlobal]::ECC_CODEWORDS_PER_BLOCK[$this.errorCorrectionLevel.getEccOrdinal()][$this.version]
+        [int] $numBlocks = [QrCode]::NUM_ERROR_CORRECTION_BLOCKS[$this.errorCorrectionLevel.getEccOrdinal()][$this.version]
+        [int] $blockEccLen = [QrCode]::ECC_CODEWORDS_PER_BLOCK[$this.errorCorrectionLevel.getEccOrdinal()][$this.version]
 		[int] $rawCodewords = [Math]::truncate([QrCode]::getNumRawDataModules($this.version) / 8)
         [int] $numShortBlocks = $numBlocks - ($rawCodewords % $numBlocks)
         [int] $shortBlockLen = [Math]::truncate($rawCodewords / $numBlocks)
@@ -1647,7 +1661,7 @@ class QrCode {
 					$runX++
 					if ($runX -eq 5)
 					{
-						$result += [QrCodeGlobal]::PENALTY_N1
+						$result += [QrCode]::PENALTY_N1
 					}
 					elseif ($runX -gt 5)
 					{
@@ -1659,13 +1673,13 @@ class QrCode {
 					$this.finderPenaltyAddHistory($runX, $runHistory)
 					if (-not $runColor)
 					{
-						$result += $this.finderPenaltyCountPatterns($runHistory) * [QrCodeGlobal]::PENALTY_N3
+						$result += $this.finderPenaltyCountPatterns($runHistory) * [QrCode]::PENALTY_N3
 					}
 					$runColor = $this.modules[$y][$x]
 					$runX = 1
 				}
 			}
-			$result += ($this.finderPenaltyTerminateAndCount($runColor, $runX, $runHistory) * [QrCodeGlobal]::PENALTY_N3)
+			$result += ($this.finderPenaltyTerminateAndCount($runColor, $runX, $runHistory) * [QrCode]::PENALTY_N3)
 		}
 		# Write-Host "1 - " + $result
 
@@ -1682,7 +1696,7 @@ class QrCode {
 					$runY++
 					if ($runY -eq 5)
 					{
-						$result += [QrCodeGlobal]::PENALTY_N1
+						$result += [QrCode]::PENALTY_N1
 					}
 					elseif ($runY -gt 5)
 					{
@@ -1694,13 +1708,13 @@ class QrCode {
 					$this.finderPenaltyAddHistory($runY, $runHistory)
 					if (-not $runColor)
 					{
-						$result += $this.finderPenaltyCountPatterns($runHistory) * [QrCodeGlobal]::PENALTY_N3
+						$result += $this.finderPenaltyCountPatterns($runHistory) * [QrCode]::PENALTY_N3
 					}
 					$runColor = $this.modules[$y][$x]
 					$runY = 1
 				}
 			}
-			$result += ($this.finderPenaltyTerminateAndCount($runColor, $runY, $runHistory) * [QrCodeGlobal]::PENALTY_N3)
+			$result += ($this.finderPenaltyTerminateAndCount($runColor, $runY, $runHistory) * [QrCode]::PENALTY_N3)
 		}
 		# Write-Host "2 - " + $result
 		
@@ -1712,7 +1726,7 @@ class QrCode {
 				[boolean] $color = $this.modules[$y][$x]
 				if (  ($color -eq $this.modules[$y][$x + 1]) -and ($color -eq $this.modules[$y + 1][$x]) -and ($color -eq $this.modules[$y + 1][$x + 1]) )
 				{
-					$result += [QrCodeGlobal]::PENALTY_N2
+					$result += [QrCode]::PENALTY_N2
 				}
 			}
 		}
@@ -1734,7 +1748,7 @@ class QrCode {
 
 		# Compute the smallest integer k >= 0 such that (45-5k)% <= black/total <= (55+5k)%
 		[int] $k = [math]::Truncate(([math]::Abs(($black * 20) - ($total * 10)) + $total - 1) / $total) - 1
-		$result += $k * [QrCodeGlobal]::PENALTY_N4
+		$result += $k * [QrCode]::PENALTY_N4
 		# Write-Host "5 - " + $result
 
 		return $result
@@ -1786,9 +1800,9 @@ class QrCode {
 	# The result is in the range [208, 29648]. This could be implemented as a 40-entry lookup table.
 	hidden static [int] getNumRawDataModules([int] $ver)
 	{
-		if (($ver -lt [QrCodeGlobal]::MIN_VERSION) -or ($ver -gt [QrCodeGlobal]::MAX_VERSION))
+		if (($ver -lt [QrCode]::MIN_VERSION) -or ($ver -gt [QrCode]::MAX_VERSION))
         {
-			throw "Version in getNumRawDataModules is not a valid value. It must range from "+[QrCodeGlobal]::MIN_VERSION+" to "+[QrCodeGlobal]::MAX_VERSION
+			throw "Version in getNumRawDataModules is not a valid value. It must range from "+[QrCode]::MIN_VERSION+" to "+[QrCode]::MAX_VERSION
 		}
 		
 		$result = (((16 * $ver) + 128) * $ver) + 64
@@ -1910,7 +1924,7 @@ class QrCode {
 	# This stateless pure function could be implemented as a (40*4)-cell lookup table.
 	static [int] getNumDataCodewords([int] $ver, [Ecc] $ecl)
 	{
-		return (([Math]::truncate([QrCode]::getNumRawDataModules($ver) / 8)) - ([QrCodeGlobal]::ECC_CODEWORDS_PER_BLOCK[$ecl.getEccOrdinal()][$ver] * [QrCodeGlobal]::NUM_ERROR_CORRECTION_BLOCKS[$ecl.getEccOrdinal()][$ver]))
+		return (([Math]::truncate([QrCode]::getNumRawDataModules($ver) / 8)) - ([QrCode]::ECC_CODEWORDS_PER_BLOCK[$ecl.getEccOrdinal()][$ver] * [QrCode]::NUM_ERROR_CORRECTION_BLOCKS[$ecl.getEccOrdinal()][$ver]))
 	}
 	
 	
@@ -2008,7 +2022,7 @@ function New-QrCode {
 	.PARAMETER borderSize
 		This parameter specify the size of the border in modules (the size of a unit square
 		in the QRCode terminology). Default size is 2, as requested by the QRCode specification.
-		This value is specified in the static variable [QrCodeGlobal]::DEFAULT_BORDER_SIZE.
+		This value is specified in the static variable [QrCode]::DEFAULT_BORDER_SIZE.
 	
 	.PARAMETER invert
 		If this switch is present, the QRCode colors will be inverted.
@@ -2063,7 +2077,7 @@ function New-QrCode {
 		[Parameter(ParameterSetName="FromSegments")][QrSegment[]] $segments,
 		[ValidateSet("LOW","MEDIUM","QUARTILE","HIGH")][string] $minimumEcc="LOW",
 		[ValidateRange(-2,7)][int] $forceMask=-1,
-		[int] $borderSize=[QrCodeGlobal]::DEFAULT_BORDER_SIZE,
+		[int] $borderSize=[QrCode]::DEFAULT_BORDER_SIZE,
 		[switch] $invert,
 		[switch] $disalowEccUpgrade,
 		[switch] $asString,
@@ -2096,6 +2110,10 @@ function New-QrCode {
 		$tmpQr.invert()
 	}
 
+	if($borderSize){
+		$tmpQr.setBorderSize($borderSize)
+	}
+
 	if($asString)
 	{
 		return ($tmpQr.toString($borderSize))
@@ -2120,7 +2138,7 @@ function New-QrBitBuffer {
 		[string] $binaryString="0000000000000"
 	)
 
-	if (-not($binaryString -match [QrCodeGlobal]::BINARY_REGEX))
+	if (-not($binaryString -match [QrCode]::BINARY_REGEX))
 		{
 			throw "binaryString to use is not a binary string"
 		}
