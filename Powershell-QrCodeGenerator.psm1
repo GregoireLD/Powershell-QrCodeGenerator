@@ -197,6 +197,8 @@ class QrCodeGlobal {
     # The maximum version number (40) supported in the QR Code Model 2 standard.
     static [int] $MAX_VERSION = 40
 
+	# The Default Border Size.
+    static [int] $DEFAULT_BORDER_SIZE = 2
 
     # For use in getPenaltyScore(), when evaluating which mask is best.
     static $PENALTY_N1 =  3
@@ -1059,7 +1061,7 @@ class QrCode {
 	# 	return result;
 	# }
 
-	[string] toString([int] $borderSize) {
+	[string] toString([int] $borderSize=[QrCodeGlobal]::DEFAULT_BORDER_SIZE) {
 		$output = ""
 
 		$blackChar = " "
@@ -1107,7 +1109,7 @@ class QrCode {
 	}
 	
 	[string] toString() {
-		return $this.toString(4)
+		return $this.toString([QrCodeGlobal]::DEFAULT_BORDER_SIZE)
 	}
 	
 	# Returns a string of SVG code for an image depicting this QR Code, with the specified number
@@ -1115,7 +1117,7 @@ class QrCode {
 	# @param border the number of border modules to add, which must be non-negative
 	# @return a string representing this QR Code as an SVG XML document
 	# @throws IllegalArgumentException if the border is negative
-	[String] toSvgString([int] $borderSize=4)
+	[String] toSvgString([int] $borderSize=[QrCodeGlobal]::DEFAULT_BORDER_SIZE)
 	{
 		if($borderSize -lt 0){throw "borderSize must be equal or greater than 0"}
 		
@@ -1162,7 +1164,7 @@ class QrCode {
 	}
 	
 	[string] toSvgString() {
-		return $this.toSvgString(4)
+		return $this.toSvgString([QrCodeGlobal]::DEFAULT_BORDER_SIZE)
 	}
 
 
@@ -1171,7 +1173,7 @@ class QrCode {
 	# @param border the number of border modules to add, which must be non-negative
 	# @return a string representing this QR Code in Unicode Braille Characters
 	# @throws IllegalArgumentException if the border is negative
-	[String] toBrailleString([int] $borderSize=4)
+	[String] toBrailleString([int] $borderSize=[QrCodeGlobal]::DEFAULT_BORDER_SIZE)
 	{
 		if($borderSize -lt 0){throw "borderSize must be equal or greater than 0"}
 
@@ -1258,7 +1260,7 @@ class QrCode {
 	}
 	
 	[string] toBrailleString() {
-		return $this.toBrailleString(4)
+		return $this.toBrailleString([QrCodeGlobal]::DEFAULT_BORDER_SIZE)
 	}
  
 	# ---- Private helper methods for constructor: Drawing function modules ----
@@ -1556,7 +1558,7 @@ class QrCode {
 	{
 		if(($msk -lt 0) -or ($msk -gt 7))
 		{
-			throw "mask is out of range. Must range from 0 to 7 (-1 is not applicable here)"
+			throw "mask is out of range. Must range from 0 to 7 (-1 and -2 are not applicable here)"
 		}
 		
 		for([int] $y = 0; $y -lt $this.size; $y++)
@@ -1574,7 +1576,7 @@ class QrCode {
 					6 {$invert = (((($x * $y % 2) + ($x * $y % 3)) % 2) -eq 0)                            }
 					7 {$invert = ((((($x + $y) % 2) + ($x * $y % 3)) % 2) -eq 0)                          }
 					default {
-						throw "mask is wierdly out of range. Must range from 0 to 7 (-1 is not applicable here)"
+						throw "mask is weirdly out of range. Must range from 0 to 7 (-1 and -2 are not applicable here)"
 					}
 				}
 				$this.modules[$y][$x] = $this.modules[$y][$x] -bxor ($invert -band (-not $this.isFunction[$y][$x]))
@@ -1665,7 +1667,6 @@ class QrCode {
 			}
 			$result += ($this.finderPenaltyTerminateAndCount($runColor, $runX, $runHistory) * [QrCodeGlobal]::PENALTY_N3)
 		}
-		# ToDo_test
 		# Write-Host "1 - " + $result
 
 		# Adjacent modules in column having same color, and finder-like patterns
@@ -1701,7 +1702,6 @@ class QrCode {
 			}
 			$result += ($this.finderPenaltyTerminateAndCount($runColor, $runY, $runHistory) * [QrCodeGlobal]::PENALTY_N3)
 		}
-		# ToDo_test
 		# Write-Host "2 - " + $result
 		
 		# 2*2 blocks of modules having same color
@@ -1716,7 +1716,6 @@ class QrCode {
 				}
 			}
 		}
-		# ToDo_test
 		# Write-Host "3 - " + $result
 		
 		# Balance of black and white modules
@@ -1731,13 +1730,11 @@ class QrCode {
 			}
 		}
 		[int] $total = $this.size * $this.size # Note that size is odd, so black/total != 1/2
-		# ToDo_test
 		# Write-Host "4 - " + $result
 
 		# Compute the smallest integer k >= 0 such that (45-5k)% <= black/total <= (55+5k)%
 		[int] $k = [math]::Truncate(([math]::Abs(($black * 20) - ($total * 10)) + $total - 1) / $total) - 1
 		$result += $k * [QrCodeGlobal]::PENALTY_N4
-		# ToDo_test
 		# Write-Host "5 - " + $result
 
 		return $result
@@ -2008,6 +2005,11 @@ function New-QrCode {
 		The "No Mask" parameter generates an invalid QRCode and must only be used for
 		educational purpose.
 	
+	.PARAMETER borderSize
+		This parameter specify the size of the border in modules (the size of a unit square
+		in the QRCode terminology). Default size is 2, as requested by the QRCode specification.
+		This value is specified in the static variable [QrCodeGlobal]::DEFAULT_BORDER_SIZE.
+	
 	.PARAMETER invert
 		If this switch is present, the QRCode colors will be inverted.
 		The same result can be obtained afterwards by using the invert() funtion of
@@ -2039,10 +2041,6 @@ function New-QrCode {
 		educational purpose.
 		Note: This is equivalent to -forceMask -2
 	
-	.PARAMETER stringBorder
-		This parameter specify the size of the border in modules (the size of a unit square
-		in the QRCode terminology).
-	
 	.INPUTS
 		The Text parameter can get it's value from the pipeline
 	
@@ -2065,17 +2063,17 @@ function New-QrCode {
 		[Parameter(ParameterSetName="FromSegments")][QrSegment[]] $segments,
 		[ValidateSet("LOW","MEDIUM","QUARTILE","HIGH")][string] $minimumEcc="LOW",
 		[ValidateRange(-2,7)][int] $forceMask=-1,
+		[int] $borderSize=[QrCodeGlobal]::DEFAULT_BORDER_SIZE,
 		[switch] $invert,
 		[switch] $disalowEccUpgrade,
 		[switch] $asString,
 		[switch] $asSvgString,
   		[switch] $asBrailleString,
-		[switch] $noMask,
-		[int] $stringBorder=4
+		[switch] $noMask
 	)
 
 	if((([int]([bool]$asString)) + ([int]([bool]$asSvgString)) + ([int]([bool]$asBrailleString))) -gt 1){throw "asString, asSvgString, asBrailleString and are mutually exclusive"}
-	if($stringBorder -lt 0){throw "stringBorder must be equal or greater than zero"}
+	if($borderSize -lt 0){throw "borderSize must be equal or greater than zero"}
 
 	[Ecc] $ecl = New-Object 'Ecc' $minimumEcc
 	
@@ -2100,17 +2098,17 @@ function New-QrCode {
 
 	if($asString)
 	{
-		return ($tmpQr.toString($stringBorder))
+		return ($tmpQr.toString($borderSize))
 	}
 	
 	if($asSvgString)
 	{
-		return ($tmpQr.toSvgString($stringBorder))
+		return ($tmpQr.toSvgString($borderSize))
 	}
 
  	if($asBrailleString)
 	{
-		return ($tmpQr.toBrailleString($stringBorder))
+		return ($tmpQr.toBrailleString($borderSize))
 	}
  	
 	return ($tmpQr)
