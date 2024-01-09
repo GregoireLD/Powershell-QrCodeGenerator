@@ -1324,17 +1324,6 @@ class QrCode {
 		$this.toSvgString() | Out-File -FilePath $completePath -Encoding UTF8
 	}
 
-	saveAsPng([String] $path, [int] $scale){
-		if($scale -lt 1){throw "scale must be equal or greater than 1"}
-
-		$completePath = $this.getFullFinalPath($path, "png")
-		$this.toBitmap().Save($completePath, [System.Drawing.Imaging.ImageFormat]::Png)
-	}
-
-	saveAsPng([String] $path){
-		$this.saveAsPng($path,1)
-	}
-
 	saveAsBmp([String] $path, [int] $scale)
 	{
 		if($scale -lt 1){throw "scale must be equal or greater than 1"}
@@ -1408,7 +1397,7 @@ class QrCode {
 	}
 
 	hidden [string] getFullFinalPath([String] $path, [String] $fileFormat){
-		$allowedFormats = @("svg","png","bmp")
+		$allowedFormats = @("svg","bmp")
 		if ($allowedFormats.IndexOf($fileFormat) -eq -1){ throw "Format not supported" }
 
 		$tmpDirectory = "./"
@@ -2212,10 +2201,6 @@ function New-QrCode {
 		Save the QrCode as a SVG file at the specified path (if only a folder path is specified,
 		it will name the file "QrCode_xxx.svg" with xxx being a sequential number).
 	
-	.PARAMETER toPng
-		Save the QrCode as a PNG file at the specified path (if only a folder path is specified,
-		it will name the file "QrCode_xxx.png" with xxx being a sequential number).
-	
 	.PARAMETER toBmp
 		Save the QrCode as a BMP file at the specified path (if only a folder path is specified,
 		it will name the file "QrCode_xxx.bmp" with xxx being a sequential number).
@@ -2291,7 +2276,6 @@ function New-QrCode {
 		[Parameter(ParameterSetName="FromSegments")][QrSegment[]] $segments,
 		[ValidateSet("LOW","MEDIUM","QUARTILE","HIGH")][string] $minimumEcc="LOW",
 		[string] $toSvg,
-		[string] $toPng,
 		[string] $toBmp,
 		[ValidateRange(1,1000)][int] $scale=10,
 		[ValidateRange(-2,7)][int] $forceMask=-1,
@@ -2336,10 +2320,6 @@ function New-QrCode {
 
 	if($toSvg){
 		$tmpQr.saveAsSvg($toSvg)
-	}
-
-	if($toPng){
-		$tmpQr.saveAsPng($toPng,$scale)
 	}
 
 	if($toBmp){
