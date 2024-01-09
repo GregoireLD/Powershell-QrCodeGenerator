@@ -1196,7 +1196,7 @@ class QrCode {
 	}
 
 
- # Returns a string of Braille characteres depicting this QR Code, with the specified number
+	# Returns a string of Braille characteres depicting this QR Code, with the specified number
 	# of border modules. The string always uses Unix newlines (\n), regardless of the platform.
 	# @param border the number of border modules to add, which must be non-negative
 	# @return a string representing this QR Code in Unicode Braille Characters
@@ -1289,6 +1289,187 @@ class QrCode {
 	
 	[string] toBrailleString() {
 		return $this.toBrailleString($this.quietZone)
+	}
+
+	[System.Drawing.Bitmap] toBitmap()
+	{
+		$blackChar = [System.Drawing.Color]::FromName("Black")
+		$whiteChar = [System.Drawing.Color]::FromName("White")
+
+		if($this.isInverted){
+			$tmpChar = $blackChar
+			$blackChar = $whiteChar
+			$whiteChar = $tmpChar
+		}
+
+    	$width = $height = $this.size + (2 * $this.quietZone)
+    	$bitmap = New-Object 'System.Drawing.Bitmap' $width,$height
+
+		# Set pixel colors
+		for ($y = 0; $y -lt $height; $y++) {
+			for ($x = 0; $x -lt $width; $x++) {
+				$color = $blackChar
+				if(($y -gt $this.quietZone) -and ($y -lt ($this.size + $this.quietZone)) -and ($x -gt $this.quietZone) -and ($x -lt ($this.size + $this.quietZone))){
+					$color = if($this.getModule($y-$this.quietZone,$x-$this.quietZone)){ $whiteChar }
+				}
+				$bitmap.SetPixel($x, $y, $color)
+			}
+		}
+
+		return $bitmap
+	}
+
+	saveAsSvg([String] $path){
+		$completePath = $this.getFullFinalPath($path, "svg")
+		$this.toSvgString() | Out-File -FilePath $completePath -Encoding UTF8
+	}
+
+	saveAsPng([String] $path, [int] $scale){
+		if($scale -lt 1){throw "scale must be equal or greater than 1"}
+
+		$completePath = $this.getFullFinalPath($path, "png")
+		$this.toBitmap().Save($completePath, [System.Drawing.Imaging.ImageFormat]::Png)
+	}
+
+	saveAsPng([String] $path){
+		$this.saveAsPng($path,1)
+	}
+
+	saveAsBmp([String] $path, [int] $scale)
+	{
+		if($scale -lt 1){throw "scale must be equal or greater than 1"}
+
+		[byte[]] $blackChar = @([byte]0xFF,[byte]0xFF,[byte]0xFF)
+		[byte[]] $whiteChar = @([byte]0x00,[byte]0x00,[byte]0x00)
+
+		if($this.isInverted){
+			$tmpChar = $blackChar
+			$blackChar = $whiteChar
+			$whiteChar = $tmpChar
+		}
+
+		$completePath = $this.getFullFinalPath($path, "bmp")
+
+		$fileStream = [System.IO.File]::Create($completePath)
+		$binaryWriter = New-Object System.IO.BinaryWriter($fileStream)
+
+		$fullwidth = ($this.size + (2 * $this.quietZone)) * $scale
+
+		$pixelSize = ([Math]::Pow($fullwidth,2)*3)
+
+		try {
+			# BMP File Header
+			$binaryWriter.Write([char[]]"BM")  # Signature
+			$binaryWriter.Write([int32](0x36 + $pixelSize))  # File size
+			$binaryWriter.Write([int32]0x00)  # Reserved
+			$binaryWriter.Write([int32]0x36)  # Offset to pixel data
+
+			# DIB Header (BITMAPINFOHEADER)
+			$binaryWriter.Write([int32]0x28)  # Header size
+			$binaryWriter.Write([int32]$fullwidth)  # Image width
+			$binaryWriter.Write([int32]$fullwidth)  # Image height
+			$binaryWriter.Write([int16]1)  # Number of color planes
+			$binaryWriter.Write([int16]24)  # Bits per pixel
+			$binaryWriter.Write([int32]0)  # Compression method (0 = none)
+			$binaryWriter.Write([int32]$pixelSize)  # Image size
+			$binaryWriter.Write([int32]0)  # Horizontal resolution (pixels/meter)
+			$binaryWriter.Write([int32]0)  # Vertical resolution (pixels/meter)
+			$binaryWriter.Write([int32]0)  # Number of colors in the palette
+			$binaryWriter.Write([int32]0)  # Number of important colors
+			
+			$padCount = 0
+			# Pixel data
+			for ($x = ($fullwidth - 1) ; $x -ge 0 ; $x--) {
+				for ($y = 0 ; $y -lt $fullwidth ; $y++) {
+					$color = $blackChar
+					# if(($y -ge $this.quietZone) -and ($y -lt ($this.size + $this.quietZone)) -and ($x -ge $this.quietZone) -and ($x -lt ($this.size + $this.quietZone))){
+					if((([math]::truncate($y/$scale)) -ge $this.quietZone) -and (([math]::truncate($y/$scale)) -lt ($this.size + $this.quietZone)) -and (([math]::truncate($x/$scale)) -ge $this.quietZone) -and (([math]::truncate($x/$scale)) -lt ($this.size + $this.quietZone))){
+						if($this.getModule(([math]::truncate($y/$scale))-$this.quietZone,([math]::truncate($x/$scale))-$this.quietZone)){ $color = $whiteChar }
+					}
+					$padCount += $color.Count
+					$binaryWriter.Write([byte[]]$color)
+				}
+
+				while($padCount%4 -ne 0){
+					$binaryWriter.Write([byte[]]0x00)
+					$padCount++
+				}
+			}
+
+		} finally {
+			$binaryWriter.Close()
+			$fileStream.Close()
+		}
+	}
+
+	saveAsBmp([String] $path)
+	{
+		$this.saveAsBmp($path,1)
+	}
+
+	hidden [string] getFullFinalPath([String] $path, [String] $fileFormat){
+		$allowedFormats = @("svg","png","bmp")
+		if ($allowedFormats.IndexOf($fileFormat) -eq -1){ throw "Format not supported" }
+
+		$tmpDirectory = "./"
+		$finalDirectory = ""
+		$finalFilename = ""
+		$tmpFilename = ""
+		$defaultFilename = "QrCode_"
+		$fileExtention = "." + $fileFormat
+		$_frperror = $null
+
+		$tmpPath = Resolve-Path $path -ErrorAction SilentlyContinue -ErrorVariable _frperror
+		if (-not $tmpPath){ $tmpPath = $_frperror[0].TargetObject }
+
+		if([System.IO.Path]::GetExtension((Split-Path $tmpPath -leaf)) -eq $fileExtention){
+			$tmpDirectory = Split-Path $tmpPath -Parent
+			$tmpFilename = Split-Path $tmpPath -leaf
+		}else{
+			$tmpDirectory = $tmpPath
+		}
+
+		if(Test-Path $tmpDirectory){
+			$finalDirectory = Get-Item $tmpDirectory
+		}else{
+			$finalDirectory = New-Item -ItemType Directory -Path $tmpDirectory
+		}
+		if (-not $finalDirectory){ throw("Error when targeting/creating the folder " + $tmpDirectory) }
+
+		if($tmpFilename){
+			$finalFilename = $tmpFilename
+		} else {
+			# determination et composition du nom du fichier
+			$finalFilename = $this.findAvailableFileName($finalDirectory, $defaultFilename, $fileExtention)
+		}
+		if (-not $finalFilename){ throw("Error when determining the filename") }
+
+		return (Join-Path -Path $finalDirectory -ChildPath $finalFilename)
+	}
+
+	hidden [string] findAvailableFileName([string] $folder, [string]$startName, [string]$extension) {
+
+		$number = 1
+		$positions = 3 # how many numbers
+		$maxAttempts = [Math]::Pow(10,$positions)
+		$result = $null
+		$fileName = ""
+
+		while ($number -le $maxAttempts) {
+			$fileName = ("{0}{1:D" + $positions + "}{2}") -f $startName, $number, $extension
+			$fullPath = Join-Path -Path $folder -ChildPath $fileName
+
+			if (-not (Test-Path -Path $fullPath -PathType Leaf)) {
+				$result = $fullPath
+				break
+			}
+
+			$number++
+		}
+
+		if ($result -eq $null) { throw ("No available file names found after " + ($maxAttempts -1) + " attempts.") }
+
+		return $fileName
 	}
  
 	# ---- Private helper methods for constructor: Drawing function modules ----
@@ -2027,6 +2208,21 @@ function New-QrCode {
 		This parameter specify the lowest Error Correction Code Level allowed to use.
 		Valid values are : "LOW","MEDIUM","QUARTILE", and "HIGH"
 	
+	.PARAMETER toSvg
+		Save the QrCode as a SVG file at the specified path (if only a folder path is specified,
+		it will name the file "QrCode_xxx.svg" with xxx being a sequential number).
+	
+	.PARAMETER toPng
+		Save the QrCode as a PNG file at the specified path (if only a folder path is specified,
+		it will name the file "QrCode_xxx.png" with xxx being a sequential number).
+	
+	.PARAMETER toBmp
+		Save the QrCode as a BMP file at the specified path (if only a folder path is specified,
+		it will name the file "QrCode_xxx.bmp" with xxx being a sequential number).
+	
+	.PARAMETER scale
+		Specify the scale at which the QrCode must be generated (BMP file format).
+	
 	.PARAMETER forceMask
 		This parameter can force the use of a sub obtimal mask (from 0 to 7),
 		auto-detect mask (-1, default), and no mask at all (-2).
@@ -2089,13 +2285,17 @@ function New-QrCode {
 	.NOTES
 		This Cmdlet can make use of New-QrBitBuffer and New-QrSegment Cmdlets.
     #>
-	[CmdletBinding()]
+	[CmdletBinding(SupportsShouldProcess)]
 	param (
 		[Parameter(ParameterSetName="FromString",ValueFromPipeline=$true)][string] $text="Sample",
 		[Parameter(ParameterSetName="FromSegments")][QrSegment[]] $segments,
 		[ValidateSet("LOW","MEDIUM","QUARTILE","HIGH")][string] $minimumEcc="LOW",
+		[string] $toSvg,
+		[string] $toPng,
+		[string] $toBmp,
+		[ValidateRange(1,1000)][int] $scale=10,
 		[ValidateRange(-2,7)][int] $forceMask=-1,
-		[Alias("borderSize")][int] $quietZone=[QrCode]::DEFAULT_QUIET_ZONE_SIZE,
+		[Alias("borderSize")][int] $quietZone=-1,
 		[switch] $invert,
 		[switch] $disalowEccUpgrade,
 		[switch] $asString,
@@ -2128,23 +2328,37 @@ function New-QrCode {
 		$tmpQr.invert()
 	}
 
-	if($quietZone){
+	if($quietZone -ne -1){
 		$tmpQr.setQuietZone($quietZone)
+	} else {
+		$tmpQr.setQuietZone([QrCode]::DEFAULT_QUIET_ZONE_SIZE)
+	}
+
+	if($toSvg){
+		$tmpQr.saveAsSvg($toSvg)
+	}
+
+	if($toPng){
+		$tmpQr.saveAsPng($toPng,$scale)
+	}
+
+	if($toBmp){
+		$tmpQr.saveAsBmp($toBmp,$scale)
 	}
 
 	if($asString)
 	{
-		return ($tmpQr.toString($quietZone))
+		return ($tmpQr.toString())
 	}
 	
 	if($asSvgString)
 	{
-		return ($tmpQr.toSvgString($quietZone))
+		return ($tmpQr.toSvgString())
 	}
 
  	if($asBrailleString)
 	{
-		return ($tmpQr.toBrailleString($quietZone))
+		return ($tmpQr.toBrailleString())
 	}
  	
 	return ($tmpQr)
