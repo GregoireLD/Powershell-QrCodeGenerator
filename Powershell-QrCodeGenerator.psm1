@@ -1092,13 +1092,13 @@ class QrCode {
 	[string] toString([int] $quietZone) {
 		$output = ""
 
-		$blackChar = " "
-		$whiteChar = [char]0x2588
+		$backgroundColor = " "
+		$foregroundColor = [char]0x2588
 
 		if($this.isInverted){
-			$tmpChar = $blackChar
-			$blackChar = $whiteChar
-			$whiteChar = $tmpChar
+			$tmpColor = $backgroundColor
+			$backgroundColor = $foregroundColor
+			$foregroundColor = $tmpColor
 		}
 
 		if($quietZone -lt 0){throw "quietZone (borderSize) must be equal or greater than 0"}
@@ -1112,21 +1112,21 @@ class QrCode {
 					if($this.getModule($x, $y))
 					{
 						# write space
-						$output += $blackChar
-						$output += $blackChar
+						$output += $foregroundColor
+						$output += $foregroundColor
 					}
 					else
 					{
 						# write block
-						$output += $whiteChar
-						$output += $whiteChar
+						$output += $backgroundColor
+						$output += $backgroundColor
 					}
 				}
 				else
 				{
 					# write protective blocks
-					$output += $whiteChar
-					$output += $whiteChar
+					$output += $backgroundColor
+					$output += $backgroundColor
 				}
 			}
 			$output += "`n"
@@ -1149,13 +1149,13 @@ class QrCode {
 	{
 		if($quietZone -lt 0){throw "quietZone (borderSize) must be equal or greater than 0"}
 		
-		$blackChar = "#FFFFFF"
-		$whiteChar = "#000000 "
+		$backgroundColor = "#FFFFFF"
+		$foregroundColor = "#000000 "
 
 		if($this.isInverted){
-			$tmpChar = $blackChar
-			$blackChar = $whiteChar
-			$whiteChar = $tmpChar
+			$tmpColor = $backgroundColor
+			$backgroundColor = $foregroundColor
+			$foregroundColor = $tmpColor
 		}
 
 		[long] $brd = $quietZone
@@ -1165,7 +1165,7 @@ class QrCode {
 		$sb += "<!DOCTYPE svg PUBLIC ""-//W3C//DTD SVG 1.1//EN"" ""http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"">`n"
 		$sb += "<svg xmlns=""http://www.w3.org/2000/svg"" version=""1.1"" viewBox=""0 0 $fullSize $fullSize"" stroke=""none"">`n"
 
-		$sb += "`t<rect width=""$fullSize"" height=""$fullSize"" fill=""$blackChar""/>`n"
+		$sb += "`t<rect width=""$fullSize"" height=""$fullSize"" fill=""$backgroundColor""/>`n"
 		
 		$sb += "`t<path d="""
 
@@ -1184,7 +1184,7 @@ class QrCode {
 			}
 		}
 
-		$sb += """ fill=""$whiteChar""/>`n"
+		$sb += """ fill=""$foregroundColor""/>`n"
 
 		$sb += "</svg>`n"
 
@@ -1222,13 +1222,13 @@ class QrCode {
 						{
 							# Write-Host "Coords xy : $($x+$innerX)-$($y+$innerY) -- $($this.getModule($x+$innerX, $y+$innerY)) -- $([Math]::Pow(2,$innerY+($innerX*3)))"
 							if($this.isInverted){
-								if(($this.getModule($x+$innerX, $y+$innerY)))
+								if(-not ($this.getModule($x+$innerX, $y+$innerY)))
 								{
 									# add dot
 									$BrailleChar += [Math]::Pow(2,$innerY+($innerX*3))
 								}
 							} else {
-								if(-not ($this.getModule($x+$innerX, $y+$innerY)))
+								if(($this.getModule($x+$innerX, $y+$innerY)))
 								{
 									# add dot
 									$BrailleChar += [Math]::Pow(2,$innerY+($innerX*3))
@@ -1238,7 +1238,7 @@ class QrCode {
 							# Write-Host "Coords xy : $($x+$innerX)-$($y+$innerY) -- FILLER -- $([Math]::Pow(2,$innerY+($innerX*3)))"
 							if (-not ((($y+$innerY) -ge ($this.size+$quietZone)) -or (($X+$innerX) -ge ($this.size+$quietZone))))
 							{
-								if(-not $this.isInverted){
+								if($this.isInverted){
 									$BrailleChar += [Math]::Pow(2,$innerY+($innerX*3))
 								}
 							}
@@ -1254,13 +1254,13 @@ class QrCode {
 					{
 						# Write-Host "Coords xy : $($x+$innerX)-$($y+$innerY) -- $($this.getModule($x+$innerX, $y+$innerY)) -- $([Math]::Pow(2,6+$innerX))`n"
 						if($this.isInverted){
-							if(($this.getModule($x+$innerX, $y+$innerY)))
+							if(-not ($this.getModule($x+$innerX, $y+$innerY)))
 							{
 								# add dot
 								$BrailleChar += [Math]::Pow(2,6+$innerX)
 							}
 						} else {
-							if(-not ($this.getModule($x+$innerX, $y+$innerY)))
+							if(($this.getModule($x+$innerX, $y+$innerY)))
 							{
 								# add dot
 								$BrailleChar += [Math]::Pow(2,6+$innerX)
@@ -1270,7 +1270,7 @@ class QrCode {
 						# Write-Host "Coords xy : $($x+$innerX)-$($y+$innerY) -- FILLER -- $([Math]::Pow(2,6+$innerX))"
 						if (-not ((($y+$innerY) -ge ($this.size+$quietZone)) -or (($X+$innerX) -ge ($this.size+$quietZone))))
 						{
-							if(-not $this.isInverted){
+							if($this.isInverted){
 								$BrailleChar += [Math]::Pow(2,6+$innerX)
 							}
 						}
@@ -1293,13 +1293,13 @@ class QrCode {
 
 	[System.Drawing.Bitmap] toBitmap()
 	{
-		$blackChar = [System.Drawing.Color]::FromName("Black")
-		$whiteChar = [System.Drawing.Color]::FromName("White")
+		$backgroundColor = [System.Drawing.Color]::FromName("Black")
+		$foregroundColor = [System.Drawing.Color]::FromName("White")
 
 		if($this.isInverted){
-			$tmpChar = $blackChar
-			$blackChar = $whiteChar
-			$whiteChar = $tmpChar
+			$tmpColor = $backgroundColor
+			$backgroundColor = $foregroundColor
+			$foregroundColor = $tmpColor
 		}
 
     	$width = $height = $this.size + (2 * $this.quietZone)
@@ -1308,9 +1308,9 @@ class QrCode {
 		# Set pixel colors
 		for ($y = 0; $y -lt $height; $y++) {
 			for ($x = 0; $x -lt $width; $x++) {
-				$color = $blackChar
+				$color = $backgroundColor
 				if(($y -gt $this.quietZone) -and ($y -lt ($this.size + $this.quietZone)) -and ($x -gt $this.quietZone) -and ($x -lt ($this.size + $this.quietZone))){
-					$color = if($this.getModule($y-$this.quietZone,$x-$this.quietZone)){ $whiteChar }
+					$color = if($this.getModule($y-$this.quietZone,$x-$this.quietZone)){ $foregroundColor }
 				}
 				$bitmap.SetPixel($x, $y, $color)
 			}
@@ -1328,13 +1328,13 @@ class QrCode {
 	{
 		if($scale -lt 1){throw "scale must be equal or greater than 1"}
 
-		[byte[]] $blackChar = @([byte]0xFF,[byte]0xFF,[byte]0xFF)
-		[byte[]] $whiteChar = @([byte]0x00,[byte]0x00,[byte]0x00)
+		[byte[]] $backgroundColor = @([byte]0xFF,[byte]0xFF,[byte]0xFF)
+		[byte[]] $foregroundColor = @([byte]0x00,[byte]0x00,[byte]0x00)
 
 		if($this.isInverted){
-			$tmpChar = $blackChar
-			$blackChar = $whiteChar
-			$whiteChar = $tmpChar
+			$tmpColor = $backgroundColor
+			$backgroundColor = $foregroundColor
+			$foregroundColor = $tmpColor
 		}
 
 		$completePath = $this.getFullFinalPath($path, "bmp")
@@ -1372,9 +1372,9 @@ class QrCode {
 			for ($x = ($originalWidth - 1) ; $x -ge 0 ; $x--) {
 				for($l = 0 ; $l -lt $scale ; $l++){
 					for ($y = 0 ; $y -lt $originalWidth ; $y++) {
-						$color = $blackChar
+						$color = $backgroundColor
 						if(($y -ge $this.quietZone) -and ($y -lt ($this.size + $this.quietZone)) -and ($x -ge $this.quietZone) -and ($x -lt ($this.size + $this.quietZone))){
-							if($this.getModule($y-$this.quietZone,$x-$this.quietZone)){ $color = $whiteChar }
+							if($this.getModule($y-$this.quietZone,$x-$this.quietZone)){ $color = $foregroundColor }
 						}
 						
 						for($c = 0 ; $c -lt $scale ; $c++){
@@ -2212,6 +2212,7 @@ function New-QrCode {
 	
 	.PARAMETER scale
 		Specify the scale at which the QrCode must be generated (BMP file format).
+		Default scale is set to 10.
 	
 	.PARAMETER forceMask
 		This parameter can force the use of a sub obtimal mask (from 0 to 7),
