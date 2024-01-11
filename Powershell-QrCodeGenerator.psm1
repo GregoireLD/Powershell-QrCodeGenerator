@@ -917,10 +917,8 @@ class QrCode {
 		[byte[]] $dataCodewords = New-Object 'byte[]' $byteSize
 
         for ([int] $i = 0; $i -lt $byteSize; $i++) {
-			# ToDo_test
 			# Write-Host("BEFORE -- i : ",$i," --- bit : ",$bb.getBit($i)," --- (i >> 3) : ",($i -shr 3)," --- dcw[i>>3] : ",$datacodewords[$i -shr 3]," --- dcw : ",$datacodewords)
 			$dataCodewords[$i] = $bb.getByte($i)
-			# ToDo_test
             # Write-Host(" AFTER -- i : ",$i," --- bit : ",$bb.getBit($i)," --- (i >> 3) : ",($i -shr 3)," --- dcw[i>>3] : ",$datacodewords[$i -shr 3]," --- dcw : ",$datacodewords)
 		}
 
@@ -944,6 +942,9 @@ class QrCode {
 
 	# Stores the size of the border
 	[int] $quietZone
+
+	# Stores the printing scale of the QR Code
+	[int] $scale
 
     # /** The error correction level used in this QR Code, which is not {@code null}. */
 	[Ecc] $errorCorrectionLevel
@@ -1005,13 +1006,11 @@ class QrCode {
 		
         # Compute ECC, draw modules, do masking
 		$this.drawFunctionPatterns()
-		# ToDo_test
 		# Write-Host $this.toString()
 		
 		[byte[]] $allCodewords = $this.addEccAndInterleave($dataCodewords)
 		
 		$this.drawCodewords($allCodewords)
-		# ToDo_test
 		# Write-Host $this.toString()
 
 		$this.mask = $this.handleConstructorMasking($msk)
@@ -1044,9 +1043,31 @@ class QrCode {
 		$this.quietZone = $quietZone
 	}
 
-	setQuietZone()
+	[int] getQuietZone()
+	{
+		return($this.quietZone)
+	}
+
+	resetQuietZone()
     {
 		$this.quietZone = [QrCode]::DEFAULT_QUIET_ZONE
+	}
+
+	setScale([int] $scale)
+	{
+		if($scale -lt 1){throw "scale must be equal or greater than 1"}
+		if($scale -gt 1000){throw "scale must be lower or equal to 1000"}
+		$this.scale = $scale
+	}
+
+	[int] getScale()
+	{
+		return($this.scale)
+	}
+
+	resetScale()
+	{
+		$this.scale = 1
 	}
 
 	# Deprecated function
@@ -1057,10 +1078,17 @@ class QrCode {
 	}
 
 	# Deprecated function
-	setBorderSize()
+	[int] getBorderSize()
     {
-		Write-Warning -Message "setBorderSize is deprecated, use setQuietZone instead"
-		$this.setQuietZone()
+		Write-Warning -Message "getBorderSize is deprecated, use getQuietZone instead"
+		return($this.quietZone)
+	}
+
+	# Deprecated function
+	resetBorderSize()
+    {
+		Write-Warning -Message "resetBorderSize is deprecated, use resetQuietZone instead"
+		$this.quietZone = [QrCode]::DEFAULT_QUIET_ZONE
 	}
 
 	# Returns a raster image depicting this QR Code, with the specified module scale and border modules.
@@ -1145,7 +1173,7 @@ class QrCode {
 	# @param quietZone the number of border modules to add, which must be non-negative
 	# @return a string representing this QR Code as an SVG XML document
 	# @throws IllegalArgumentException if the quiet zone size is negative
-	[String] toSvgString([int] $quietZone)
+	[String] toSvgString([int] $quietZone, [int] $scale)
 	{
 		if($quietZone -lt 0){throw "quietZone (borderSize) must be equal or greater than 0"}
 		
@@ -1159,13 +1187,13 @@ class QrCode {
 		}
 
 		[long] $brd = $quietZone
-		[long] $fullSize = $this.size + ($brd * 2)
+		[long] $fullSize = ($this.size + ($brd * 2))*$scale
 		[string] $sb = ""
 		$sb += "<?xml version=""1.0"" encoding=""UTF-8""?>`n"
 		$sb += "<!DOCTYPE svg PUBLIC ""-//W3C//DTD SVG 1.1//EN"" ""http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"">`n"
 		$sb += "<svg xmlns=""http://www.w3.org/2000/svg"" version=""1.1"" viewBox=""0 0 $fullSize $fullSize"" stroke=""none"">`n"
 
-		$sb += "`t<rect width=""$fullSize"" height=""$fullSize"" fill=""$backgroundColor""/>`n"
+		$sb += "`t<rect width=""($fullSize*$scale)"" height=""($fullSize*$scale)"" fill=""$backgroundColor""/>`n"
 		
 		$sb += "`t<path d="""
 
@@ -1179,7 +1207,7 @@ class QrCode {
 					{
 						$sb += " "
 					}
-					$sb += "M$( $x + $brd ),$( $y + $brd )h1v1h-1z"
+					$sb += "M$( ($x + $brd) * $scale),$( ( $y + $brd) * $scale)h$($scale)v$($scale)h-$($scale)z"
 				}
 			}
 		}
@@ -1191,8 +1219,12 @@ class QrCode {
 		return $sb
 	}
 	
+	[string] toSvgString([int] $scale) {
+		return $this.toSvgString($this.quietZone, $scale)
+	}
+
 	[string] toSvgString() {
-		return $this.toSvgString($this.quietZone)
+		return $this.toSvgString($this.quietZone, $this.scale)
 	}
 
 
@@ -1291,43 +1323,49 @@ class QrCode {
 		return $this.toBrailleString($this.quietZone)
 	}
 
-	[System.Drawing.Bitmap] toBitmap()
-	{
-		$backgroundColor = [System.Drawing.Color]::FromName("Black")
-		$foregroundColor = [System.Drawing.Color]::FromName("White")
+	# [System.Drawing.Bitmap] toBitmap([int] $quietZone, [int] $scale)
+	# {
+	# 	$backgroundColor = [System.Drawing.Color]::FromName("Black")
+	# 	$foregroundColor = [System.Drawing.Color]::FromName("White")
 
-		if($this.isInverted){
-			$tmpColor = $backgroundColor
-			$backgroundColor = $foregroundColor
-			$foregroundColor = $tmpColor
-		}
+	# 	if($this.isInverted){
+	# 		$tmpColor = $backgroundColor
+	# 		$backgroundColor = $foregroundColor
+	# 		$foregroundColor = $tmpColor
+	# 	}
 
-    	$width = $height = $this.size + (2 * $this.quietZone)
-    	$bitmap = New-Object 'System.Drawing.Bitmap' $width,$height
+    # 	$width = $height = $this.size + (2 * $quietZone)
+    # 	$bitmap = New-Object 'System.Drawing.Bitmap' $width,$height
 
-		# Set pixel colors
-		for ($y = 0; $y -lt $height; $y++) {
-			for ($x = 0; $x -lt $width; $x++) {
-				$color = $backgroundColor
-				if(($y -gt $this.quietZone) -and ($y -lt ($this.size + $this.quietZone)) -and ($x -gt $this.quietZone) -and ($x -lt ($this.size + $this.quietZone))){
-					$color = if($this.getModule($y-$this.quietZone,$x-$this.quietZone)){ $foregroundColor }
-				}
-				$bitmap.SetPixel($x, $y, $color)
-			}
-		}
+	# 	# Set pixel colors
+	# 	for ($y = 0; $y -lt $height; $y++) {
+	# 		for ($x = 0; $x -lt $width; $x++) {
+	# 			$color = $backgroundColor
+	# 			if(($y -gt $quietZone) -and ($y -lt ($this.size + $quietZone)) -and ($x -gt $quietZone) -and ($x -lt ($this.size + $quietZone))){
+	# 				$color = if($this.getModule($y-$quietZone,$x-$quietZone)){ $foregroundColor }
+	# 			}
+	# 			$bitmap.SetPixel($x, $y, $color)
+	# 		}
+	# 	}
 
-		return $bitmap
-	}
+	# 	return $bitmap
+	# }
+
+	# [System.Drawing.Bitmap] toBitmap([int] $scale) {
+	# 	return $this.toBitmap($this.quietZone, $scale)
+	# }
+
+	# [System.Drawing.Bitmap] toBitmap() {
+	# 	return $this.toBitmap($this.quietZone, $this.scale)
+	# }
 
 	saveAsSvg([String] $path){
 		$completePath = $this.getFullFinalPath($path, "svg")
 		$this.toSvgString() | Out-File -FilePath $completePath -Encoding UTF8
 	}
 
-	SaveAsBmp([String] $path, [int] $scale)
+	SaveAsBmp([String] $path)
 	{
-		if($scale -lt 1){throw "scale must be equal or greater than 1"}
-
 		[byte[]] $backgroundColor = @([byte]0xFF,[byte]0xFF,[byte]0xFF)
 		[byte[]] $foregroundColor = @([byte]0x00,[byte]0x00,[byte]0x00)
 
@@ -1343,7 +1381,7 @@ class QrCode {
 		$binaryWriter = New-Object System.IO.BinaryWriter($fileStream)
 
 		$originalWidth = ($this.size + (2 * $this.quietZone))
-		$fullWidth = $originalWidth * $scale
+		$fullWidth = $originalWidth * $this.scale
 
 		$pixelSize = ([Math]::Pow($fullWidth,2)*3)
 
@@ -1370,14 +1408,14 @@ class QrCode {
 			$padCount = 0
 			# Pixel data
 			for ($x = ($originalWidth - 1) ; $x -ge 0 ; $x--) {
-				for($l = 0 ; $l -lt $scale ; $l++){
+				for($l = 0 ; $l -lt $this.scale ; $l++){
 					for ($y = 0 ; $y -lt $originalWidth ; $y++) {
 						$color = $backgroundColor
 						if(($y -ge $this.quietZone) -and ($y -lt ($this.size + $this.quietZone)) -and ($x -ge $this.quietZone) -and ($x -lt ($this.size + $this.quietZone))){
 							if($this.getModule($y-$this.quietZone,$x-$this.quietZone)){ $color = $foregroundColor }
 						}
 						
-						for($c = 0 ; $c -lt $scale ; $c++){
+						for($c = 0 ; $c -lt $this.scale ; $c++){
 							$padCount += $color.Count
 							$binaryWriter.Write([byte[]]$color)
 						}
@@ -1394,11 +1432,6 @@ class QrCode {
 			$binaryWriter.Close()
 			$fileStream.Close()
 		}
-	}
-
-	SaveAsBmp([String] $path)
-	{
-		$this.SaveAsBmp($path,1)
 	}
 
 	hidden [string] getFullFinalPath([String] $path, [String] $fileFormat){
@@ -1733,7 +1766,6 @@ class QrCode {
 					[boolean] $upward = (($right + 1) -band 2) -eq 0
 					[int] $y = $vert
 					if ($upward) {$y = ($this.size - 1 - $vert)} # Actual y coordinate
-					# ToDo_test
 					# Write-Host("upward : ",$upward," --- y : ",$y," --- x : ",$x," --- i : ",$i," --- data.length : ",$data.length)
 					if ( (-not ($this.isFunction[$y][$x])) -and ($i -lt ($data.length * 8)))
 					{
@@ -1821,7 +1853,6 @@ class QrCode {
 			throw "mask is out of range in handleConstructorMasking. Must range from 0 to 7 (-1 is not applicable here)"
 		}
 		
-		# ToDo_test
 		# $msk = 1
 		# Write-Host $msk
 
@@ -2211,8 +2242,8 @@ function New-QrCode {
 		it will name the file "QrCode_xxx.bmp" with xxx being a sequential number).
 	
 	.PARAMETER scale
-		Specify the scale at which the QrCode must be generated (BMP file format).
-		Default scale is set to 10.
+		Specify the scale at which the QrCode must be generated (BMP and SVG file format).
+		Default scale is set to 1.
 	
 	.PARAMETER forceMask
 		This parameter can force the use of a sub obtimal mask (from 0 to 7),
@@ -2283,7 +2314,7 @@ function New-QrCode {
 		[ValidateSet("LOW","MEDIUM","QUARTILE","HIGH")][string] $minimumEcc="LOW",
 		[string] $toSvg,
 		[string] $toBmp,
-		[ValidateRange(1,1000)][int] $scale=10,
+		[ValidateRange(1,100)][int] $scale=1,
 		[ValidateRange(-2,7)][int] $forceMask=-1,
 		[Alias("borderSize")][int] $quietZone=-1,
 		[switch] $invert,
@@ -2295,7 +2326,7 @@ function New-QrCode {
 	)
 
 	if((([int]([bool]$asString)) + ([int]([bool]$asSvgString)) + ([int]([bool]$asBrailleString))) -gt 1){throw "asString, asSvgString, asBrailleString and are mutually exclusive"}
-	if($quietZone -lt 0){throw "quietZone (borderSize) must be equal or greater than zero"}
+	if($quietZone -lt -1){throw "quietZone (borderSize) must be equal or greater than zero"}
 
 	[Ecc] $ecl = New-Object 'Ecc' $minimumEcc
 	
@@ -2318,10 +2349,12 @@ function New-QrCode {
 		$tmpQr.invert()
 	}
 
-	if($quietZone -ne -1){
-		$tmpQr.setQuietZone($quietZone)
+	$tmpQr.setScale($scale)
+
+	if($quietZone -eq -1){
+		$tmpQr.setQuietZone([QrCode]::DEFAULT_QUIET_ZONE)
 	} else {
-		$tmpQr.setQuietZone([QrCode]::DEFAULT_QUIET_ZONE_SIZE)
+		$tmpQr.setQuietZone($quietZone)
 	}
 
 	if($toSvg){
@@ -2329,7 +2362,7 @@ function New-QrCode {
 	}
 
 	if($toBmp){
-		$tmpQr.SaveAsBmp($toBmp,$scale)
+		$tmpQr.SaveAsBmp($toBmp)
 	}
 
 	if($asString)
