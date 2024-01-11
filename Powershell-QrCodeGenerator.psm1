@@ -1359,7 +1359,7 @@ class QrCode {
 	# 	return $this.toBitmap($this.quietZone, $this.scale)
 	# }
 
-	saveAsSvg([String] $path){
+	SaveAsSvg([String] $path){
 		$completePath = $this.getFullFinalPath($path, "svg")
 		$this.toSvgString() | Out-File -FilePath $completePath -Encoding UTF8
 	}
@@ -2358,7 +2358,7 @@ function New-QrCode {
 	}
 
 	if($toSvg){
-		$tmpQr.saveAsSvg($toSvg)
+		$tmpQr.SaveAsSvg($toSvg)
 	}
 
 	if($toBmp){
