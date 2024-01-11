@@ -1324,7 +1324,7 @@ class QrCode {
 		$this.toSvgString() | Out-File -FilePath $completePath -Encoding UTF8
 	}
 
-	saveAsBmp([String] $path, [int] $scale)
+	SaveAsBmp([String] $path, [int] $scale)
 	{
 		if($scale -lt 1){throw "scale must be equal or greater than 1"}
 
@@ -1342,9 +1342,10 @@ class QrCode {
 		$fileStream = [System.IO.File]::Create($completePath)
 		$binaryWriter = New-Object System.IO.BinaryWriter($fileStream)
 
-		$fullwidth = ($this.size + (2 * $this.quietZone)) * $scale
+		$originalWidth = ($this.size + (2 * $this.quietZone))
+		$fullWidth = $originalWidth * $scale
 
-		$pixelSize = ([Math]::Pow($fullwidth,2)*3)
+		$pixelSize = ([Math]::Pow($fullWidth,2)*3)
 
 		try {
 			# BMP File Header
@@ -1355,8 +1356,8 @@ class QrCode {
 
 			# DIB Header (BITMAPINFOHEADER)
 			$binaryWriter.Write([int32]0x28)  # Header size
-			$binaryWriter.Write([int32]$fullwidth)  # Image width
-			$binaryWriter.Write([int32]$fullwidth)  # Image height
+			$binaryWriter.Write([int32]$fullWidth)  # Image width
+			$binaryWriter.Write([int32]$fullWidth)  # Image height
 			$binaryWriter.Write([int16]1)  # Number of color planes
 			$binaryWriter.Write([int16]24)  # Bits per pixel
 			$binaryWriter.Write([int32]0)  # Compression method (0 = none)
@@ -1368,20 +1369,24 @@ class QrCode {
 			
 			$padCount = 0
 			# Pixel data
-			for ($x = ($fullwidth - 1) ; $x -ge 0 ; $x--) {
-				for ($y = 0 ; $y -lt $fullwidth ; $y++) {
-					$color = $blackChar
-					# if(($y -ge $this.quietZone) -and ($y -lt ($this.size + $this.quietZone)) -and ($x -ge $this.quietZone) -and ($x -lt ($this.size + $this.quietZone))){
-					if((([math]::truncate($y/$scale)) -ge $this.quietZone) -and (([math]::truncate($y/$scale)) -lt ($this.size + $this.quietZone)) -and (([math]::truncate($x/$scale)) -ge $this.quietZone) -and (([math]::truncate($x/$scale)) -lt ($this.size + $this.quietZone))){
-						if($this.getModule(([math]::truncate($y/$scale))-$this.quietZone,([math]::truncate($x/$scale))-$this.quietZone)){ $color = $whiteChar }
+			for ($x = ($originalWidth - 1) ; $x -ge 0 ; $x--) {
+				for($l = 0 ; $l -lt $scale ; $l++){
+					for ($y = 0 ; $y -lt $originalWidth ; $y++) {
+						$color = $blackChar
+						if(($y -ge $this.quietZone) -and ($y -lt ($this.size + $this.quietZone)) -and ($x -ge $this.quietZone) -and ($x -lt ($this.size + $this.quietZone))){
+							if($this.getModule($y-$this.quietZone,$x-$this.quietZone)){ $color = $whiteChar }
+						}
+						
+						for($c = 0 ; $c -lt $scale ; $c++){
+							$padCount += $color.Count
+							$binaryWriter.Write([byte[]]$color)
+						}
 					}
-					$padCount += $color.Count
-					$binaryWriter.Write([byte[]]$color)
-				}
 
-				while($padCount%4 -ne 0){
-					$binaryWriter.Write([byte[]]0x00)
-					$padCount++
+					while($padCount%4 -ne 0){
+						$binaryWriter.Write([byte[]]0x00)
+						$padCount++
+					}
 				}
 			}
 
@@ -1391,9 +1396,9 @@ class QrCode {
 		}
 	}
 
-	saveAsBmp([String] $path)
+	SaveAsBmp([String] $path)
 	{
-		$this.saveAsBmp($path,1)
+		$this.SaveAsBmp($path,1)
 	}
 
 	hidden [string] getFullFinalPath([String] $path, [String] $fileFormat){
@@ -2323,7 +2328,7 @@ function New-QrCode {
 	}
 
 	if($toBmp){
-		$tmpQr.saveAsBmp($toBmp,$scale)
+		$tmpQr.SaveAsBmp($toBmp,$scale)
 	}
 
 	if($asString)
