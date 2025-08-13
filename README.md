@@ -3,25 +3,21 @@ Cross-platform QrCode Generator, with a CLI display, and SVG export functionalit
 this is mainly inspired by Nayuki's "QR-Code-generator", fully reimplemented in Powershell. No Wrapper.
 Fully compatible with Windows, macOS, and Linux systems.
 
+## 🔧 Installation using PowerShell Gallery
+
+You can get this module automaticaly from the PowerShell Gallery as "Powershell-QrCodeGenerator":
+
+```powershell
+Install-Module -Name Powershell-QrCodeGenerator
+```
+
+after installing it, you can make the classes available using the following line either by itself, or adding it in your $PROFILE file.
+
+```powershell
+Using module Powershell-QrCodeGenerator
+```
+
 ## Samples :
-
-### Auto-Loading :
-
-To use this module, the "Powershell-QrCodeGenerator" folder, contaning both the psm1
-and the psd1 files, must be in one of your default Powershell Modules folder.
-You can check what they are using :
-
-```powershell
-Write-Output $env:PSModulePath
-```
-
-### Manual Loading :
-
-You can also manually enable it using the folowing command :
-
-```powershell
-Import-Module <Path_to_the_Powershell-QrCodeGenerator.psm1_file>
-```
 
 ### Various QrCode :
 
