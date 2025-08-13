@@ -30,7 +30,7 @@
     Copyright = '(c) 2020 Gregoire L. Duval / Tech Guru - All rights reserved.'
     
     # Description of the functionality provided by this module
-    # Description = ''
+    Description = 'QrCode Generator, mainly inspired by Nayuki QR-Code-generator, fully reimplemented in Powershell. No Wrapper.'
     
     # Minimum version of the PowerShell engine required by this module
     PowerShellVersion = '5.1'
