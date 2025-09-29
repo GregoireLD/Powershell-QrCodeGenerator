@@ -1193,7 +1193,7 @@ class QrCode {
 		$sb += "<!DOCTYPE svg PUBLIC ""-//W3C//DTD SVG 1.1//EN"" ""http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"">`n"
 		$sb += "<svg xmlns=""http://www.w3.org/2000/svg"" version=""1.1"" viewBox=""0 0 $fullSize $fullSize"" stroke=""none"">`n"
 
-		$sb += "`t<rect width=""($fullSize*$scale)"" height=""($fullSize*$scale)"" fill=""$backgroundColor""/>`n"
+		$sb += "`t<rect width=""" + ($fullSize*$scale) + """ height=""" + ($fullSize*$scale) + """ fill=""" + $backgroundColor + """/>`n"
 		
 		$sb += "`t<path d="""
 
@@ -1494,7 +1494,7 @@ class QrCode {
 			$number++
 		}
 
-		if ($result -eq $null) { throw ("No available file names found after " + ($maxAttempts -1) + " attempts.") }
+		if ($null -eq $result) { throw ("No available file names found after " + ($maxAttempts -1) + " attempts.") }
 
 		return $fileName
 	}
@@ -2307,7 +2307,7 @@ function New-QrCode {
 	.NOTES
 		This Cmdlet can make use of New-QrBitBuffer and New-QrSegment Cmdlets.
     #>
-	[CmdletBinding(SupportsShouldProcess)]
+	[CmdletBinding()]
 	param (
 		[Parameter(ParameterSetName="FromString",ValueFromPipeline=$true)][string] $text="Sample",
 		[Parameter(ParameterSetName="FromSegments")][QrSegment[]] $segments,
