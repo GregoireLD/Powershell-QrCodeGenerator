@@ -1167,6 +1167,86 @@ class QrCode {
 	[string] toString() {
 		return $this.toString($this.quietZone)
 	}
+
+	[string] toDenseString([int] $quietZone) {
+		$esc = [char]27
+
+		# Truecolor selectors
+		$fgPrefix = "$esc[38;"  # foreground
+		$bgPrefix = "$esc[48;"  # background
+
+		# QR colors (dark/light)
+		$darkColor = "2;0;0;0m"
+		$lightColor = "2;255;255;255m"
+
+		# For '▄' (lower half block):
+		#   TOP pixel uses BACKGROUND color
+		#   BOTTOM pixel uses FOREGROUND color
+		$glyph = [string][char]0x2584
+
+		if($this.isInverted){
+			$tmpColor = $darkColor
+			$darkColor = $lightColor
+			$lightColor = $tmpColor
+		}
+
+		# Precompute the 4 pair sequences (top x bottom)
+		# index bits: (topIsDark ? 2 : 0) + (botIsDark ? 1 : 0)
+		$pairAnsi = @(
+			($bgPrefix + $lightColor + $fgPrefix + $lightColor),  # 0: top light, bottom light
+			($bgPrefix + $lightColor + $fgPrefix + $darkColor ),  # 1: top light, bottom dark
+			($bgPrefix + $darkColor  + $fgPrefix + $lightColor),  # 2: top dark,  bottom light
+			($bgPrefix + $darkColor  + $fgPrefix + $darkColor )   # 3: top dark,  bottom dark
+		)
+
+		if($quietZone -lt 0){throw "quietZone (borderSize) must be equal or greater than 0"}
+
+		$w = $this.size
+		$min = -$quietZone
+		$max = $w + $quietZone
+
+		$sb = [System.Text.StringBuilder]::new()
+
+		for ([int]$y = $min; $y -lt $max; $y += 2) {
+			# Reset per line so we never leak styles
+        	$lastPair = -1
+
+        	for ([int]$x = $min; $x -lt $max; $x++) {
+				# Decide top/bottom module colors with bounds checks
+				$topIsDark = $false
+				$botIsDark = $false
+
+				# Top module
+				if ($x -ge 0 -and $x -lt $w -and $y -ge 0 -and $y -lt $w) {
+					$topIsDark = [bool]$this.getModule($x, $y)
+				}
+
+				# Bottom module (odd-height-safe: if out of bounds => light)
+				$by = $y + 1
+				if ($x -ge 0 -and $x -lt $w -and $by -ge 0 -and $by -lt $w) {
+					$botIsDark = [bool]$this.getModule($x, $by)
+				}
+
+				$pair = (([int]$topIsDark) * 2) + ([int]$botIsDark)
+
+				if ($pair -ne $lastPair) {
+					[void]$sb.Append($pairAnsi[$pair])
+					$lastPair = $pair
+				}
+
+				[void]$sb.Append($glyph)
+			}
+
+			# Reset at end of line (important) + newline
+			[void]$sb.Append("$esc[0m")
+			[void]$sb.Append("`n")
+		}
+    	return $sb.ToString()
+	}
+	
+	[string] toDenseString() {
+		return $this.toDenseString($this.quietZone)
+	}
 	
 	# Returns a string of SVG code for an image depicting this QR Code, with the specified number
 	# of border modules. The string always uses Unix newlines (\n), regardless of the platform.
@@ -2264,7 +2344,7 @@ function New-QrCode {
 		If this switch is present, the QRCode colors will be inverted.
 		The same result can be obtained afterwards by using the invert() funtion of
 		a QRCode object.
-
+	
 	.PARAMETER disalowEccUpgrade
 		If this switch is present, the QRCode will specificaly be generated with the
 		specified ECC level, even if it would be possible to have a better ECC at the
@@ -2274,6 +2354,11 @@ function New-QrCode {
 		Instead of a QRCode object, the output will be a string suitable for displaying
 		the QRCode directly as a console output. The same result can be obtained with
 		the toString() funtion of a QRCode object.
+	
+	.PARAMETER asDenseString
+		Instead of a QRCode object, the output will be a UTF-8string suitable for displaying
+		the QRCode directly as a console output. This will use the Half-block characters.
+		The same result can be obtained with the toDenseString() funtion of a QRCode object.
 	
 	.PARAMETER asSvgString
 		Instead of a QRCode object, the output will be a SVG-formated string wich can
@@ -2320,12 +2405,13 @@ function New-QrCode {
 		[switch] $invert,
 		[switch] $disalowEccUpgrade,
 		[switch] $asString,
+		[switch] $asDenseString,
 		[switch] $asSvgString,
   		[switch] $asBrailleString,
 		[switch] $noMask
 	)
 
-	if((([int]([bool]$asString)) + ([int]([bool]$asSvgString)) + ([int]([bool]$asBrailleString))) -gt 1){throw "asString, asSvgString, asBrailleString and are mutually exclusive"}
+	if((([int]([bool]$asString)) + ([int]([bool]$asDenseString))+ ([int]([bool]$asSvgString)) + ([int]([bool]$asBrailleString))) -gt 1){throw "asString, asDenseString, asSvgString, and asBrailleString are mutually exclusive"}
 	if($quietZone -lt -1){throw "quietZone (borderSize) must be equal or greater than zero"}
 
 	[Ecc] $ecl = New-Object 'Ecc' $minimumEcc
@@ -2368,6 +2454,11 @@ function New-QrCode {
 	if($asString)
 	{
 		return ($tmpQr.toString())
+	}
+
+	if($asDenseString)
+	{
+		return ($tmpQr.toDenseString())
 	}
 	
 	if($asSvgString)
