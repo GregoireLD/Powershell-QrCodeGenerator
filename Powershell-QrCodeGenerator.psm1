@@ -1117,7 +1117,7 @@ class QrCode {
 	# 	return result;
 	# }
 
-	[string] toString([int] $quietZone) {
+	[string] toWideString([int] $quietZone) {
 		$output = ""
 
 		$backgroundColor = " "
@@ -1164,11 +1164,11 @@ class QrCode {
 		return $output
 	}
 	
-	[string] toString() {
-		return $this.toString($this.quietZone)
+	[string] toWideString() {
+		return $this.toWideString($this.quietZone)
 	}
 
-	[string] toDenseString([int] $quietZone) {
+	[string] toString([int] $quietZone) {
 		$esc = [char]27
 
 		# Truecolor selectors
@@ -1244,8 +1244,8 @@ class QrCode {
     	return $sb.ToString()
 	}
 	
-	[string] toDenseString() {
-		return $this.toDenseString($this.quietZone)
+	[string] toString() {
+		return $this.toString($this.quietZone)
 	}
 	
 	# Returns a string of SVG code for an image depicting this QR Code, with the specified number
@@ -2328,8 +2328,8 @@ function New-QrCode {
 	.PARAMETER forceMask
 		This parameter can force the use of a sub obtimal mask (from 0 to 7),
 		auto-detect mask (-1, default), and no mask at all (-2).
-		The "No Mask" parameter generates an invalid QRCode and must only be used for
-		educational purpose.
+		The "No Mask" parameter generates an invalid QRCode and must be used for
+		educational purpose only.
 	
 	.PARAMETER quietZone
 		This parameter specify the size of the Quiet Zone (border) in modules (wich
@@ -2351,14 +2351,14 @@ function New-QrCode {
 		same size.
 	
 	.PARAMETER asString
-		Instead of a QRCode object, the output will be a string suitable for displaying
-		the QRCode directly as a console output. The same result can be obtained with
-		the toString() funtion of a QRCode object.
-	
-	.PARAMETER asDenseString
 		Instead of a QRCode object, the output will be a UTF-8string suitable for displaying
 		the QRCode directly as a console output. This will use the Half-block characters.
-		The same result can be obtained with the toDenseString() funtion of a QRCode object.
+		The same result can be obtained with the toString() funtion of a QRCode object.
+	
+	.PARAMETER asWideString
+		Instead of a QRCode object, the output will be a string suitable for displaying
+		the QRCode directly as a console output. The same result can be obtained with
+		the toWideString() funtion of a QRCode object.
 	
 	.PARAMETER asSvgString
 		Instead of a QRCode object, the output will be a SVG-formated string wich can
@@ -2405,13 +2405,13 @@ function New-QrCode {
 		[switch] $invert,
 		[switch] $disalowEccUpgrade,
 		[switch] $asString,
-		[switch] $asDenseString,
+		[switch] $asWideString,
 		[switch] $asSvgString,
   		[switch] $asBrailleString,
 		[switch] $noMask
 	)
 
-	if((([int]([bool]$asString)) + ([int]([bool]$asDenseString))+ ([int]([bool]$asSvgString)) + ([int]([bool]$asBrailleString))) -gt 1){throw "asString, asDenseString, asSvgString, and asBrailleString are mutually exclusive"}
+	if((([int]([bool]$asString)) + ([int]([bool]$asWideString))+ ([int]([bool]$asSvgString)) + ([int]([bool]$asBrailleString))) -gt 1){throw "asString, asWideString, asSvgString, and asBrailleString are mutually exclusive"}
 	if($quietZone -lt -1){throw "quietZone (borderSize) must be equal or greater than zero"}
 
 	[Ecc] $ecl = New-Object 'Ecc' $minimumEcc
@@ -2456,9 +2456,9 @@ function New-QrCode {
 		return ($tmpQr.toString())
 	}
 
-	if($asDenseString)
+	if($asWideString)
 	{
-		return ($tmpQr.toDenseString())
+		return ($tmpQr.toWideString())
 	}
 	
 	if($asSvgString)
