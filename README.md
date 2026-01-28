@@ -1,11 +1,17 @@
 # Powershell-QrCodeGenerator
 Cross-platform QrCode Generator, with a CLI display, and SVG export functionality.
-this is mainly inspired by Nayuki's "QR-Code-generator", fully reimplemented in Powershell. No Wrapper.
+this is mainly inspired by Nayuki's great "QR-Code-generator", fully reimplemented in Powershell. No Wrapper.
 Fully compatible with Windows, macOS, and Linux systems.
+
+The original Nayuki's webpage can be found here:
+https://www.nayuki.io/page/qr-code-generator-library
+
+And Nayuki's original GitHub Repo:
+https://github.com/nayuki/QR-Code-generator
 
 ## 🔧 Installation using PowerShell Gallery
 
-You can get this module automaticaly from the PowerShell Gallery as "Powershell-QrCodeGenerator":
+You can get this module automatically from the PowerShell Gallery as "Powershell-QrCodeGenerator":
 
 ```powershell
 Install-Module -Name Powershell-QrCodeGenerator
